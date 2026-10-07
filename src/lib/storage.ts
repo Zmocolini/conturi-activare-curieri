@@ -1,13 +1,98 @@
 import fs from "fs";
 import path from "path";
-import { Application, ApplicationStatus, VehicleType } from "./types";
+import { createClient, Client } from "@libsql/client";
+import { Application, ApplicationStatus, PlatformType, TicketType, VehicleType } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const APPLICATIONS_FILE = path.join(DATA_DIR, "applications.json");
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
-// In-memory fallback if file system is read-only (e.g. serverless on Vercel without persistent disk)
+// Memory store fallback
 let memoryStore: Application[] = [];
+
+// Turso client instance
+let dbClient: Client | null = null;
+let dbInitialized = false;
+
+function getClient(): Client | null {
+  if (dbClient) return dbClient;
+  const url = process.env.TURSO_DATABASE_URL;
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+
+  if (url) {
+    try {
+      dbClient = createClient({
+        url,
+        ...(authToken ? { authToken } : {}),
+      });
+      return dbClient;
+    } catch (err) {
+      console.warn("Failed to create Turso client:", err);
+      return null;
+    }
+  }
+  return null;
+}
+
+async function ensureDbTable(client: Client): Promise<void> {
+  if (dbInitialized) return;
+  try {
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS applications (
+        id TEXT PRIMARY KEY,
+        recruiter TEXT NOT NULL,
+        ticket_type TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        new_phone TEXT,
+        email TEXT,
+        city TEXT,
+        platforms TEXT NOT NULL,
+        vehicle_type TEXT,
+        old_vehicle_type TEXT,
+        id_card_photo_url TEXT,
+        selfie_photo_url TEXT,
+        status TEXT NOT NULL,
+        rejection_reason TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT
+      )
+    `);
+    dbInitialized = true;
+  } catch (err) {
+    console.error("Failed to ensure applications table in Turso:", err);
+  }
+}
+
+function rowToApplication(row: any): Application {
+  let platforms: PlatformType[] = [];
+  try {
+    platforms = typeof row.platforms === "string" ? JSON.parse(row.platforms) : row.platforms || [];
+  } catch {
+    platforms = [];
+  }
+  return {
+    id: String(row.id),
+    recruiter: String(row.recruiter || "glovowolt"),
+    ticketType: (row.ticket_type || "activare_cont") as TicketType,
+    fullName: String(row.full_name || ""),
+    phone: String(row.phone || ""),
+    newPhone: row.new_phone ? String(row.new_phone) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    city: row.city ? String(row.city) : undefined,
+    platforms,
+    vehicleType: row.vehicle_type ? (row.vehicle_type as VehicleType) : undefined,
+    oldVehicleType: row.old_vehicle_type ? (row.old_vehicle_type as VehicleType) : undefined,
+    idCardPhotoUrl: row.id_card_photo_url ? String(row.id_card_photo_url) : undefined,
+    selfiePhotoUrl: row.selfie_photo_url ? String(row.selfie_photo_url) : undefined,
+    status: (row.status || "nou") as ApplicationStatus,
+    rejectionReason: row.rejection_reason ? String(row.rejection_reason) : undefined,
+    notes: row.notes ? String(row.notes) : undefined,
+    createdAt: String(row.created_at || new Date().toISOString()),
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+  };
+}
 
 function ensureDirectories() {
   try {
@@ -18,11 +103,31 @@ function ensureDirectories() {
       fs.mkdirSync(UPLOADS_DIR, { recursive: true });
     }
   } catch (err) {
-    console.warn("Could not create local directories (expected on serverless environments):", err);
+    console.warn("Could not create local directories (expected on serverless):", err);
   }
 }
 
 export async function getApplications(recruiter?: string): Promise<Application[]> {
+  const client = getClient();
+  if (client) {
+    try {
+      await ensureDbTable(client);
+      let rs;
+      if (recruiter) {
+        rs = await client.execute({
+          sql: "SELECT * FROM applications WHERE recruiter = ? ORDER BY created_at DESC",
+          args: [recruiter],
+        });
+      } else {
+        rs = await client.execute("SELECT * FROM applications ORDER BY created_at DESC");
+      }
+      return rs.rows.map(rowToApplication);
+    } catch (err) {
+      console.error("Turso getApplications error, falling back to local storage:", err);
+    }
+  }
+
+  // Fallback to local file / memory
   let all: Application[] = [];
   try {
     ensureDirectories();
@@ -32,12 +137,10 @@ export async function getApplications(recruiter?: string): Promise<Application[]
     } else {
       all = [...memoryStore];
     }
-  } catch (err) {
-    console.warn("Reading from file failed, returning memory store:", err);
+  } catch {
     all = [...memoryStore];
   }
 
-  // Normalize older entries that might lack recruiter
   all = all.map((app) => ({
     ...app,
     recruiter: app.recruiter || "glovowolt",
@@ -56,6 +159,46 @@ export async function saveApplication(app: Application): Promise<void> {
     recruiter: app.recruiter || "glovowolt",
   };
 
+  const client = getClient();
+  if (client) {
+    try {
+      await ensureDbTable(client);
+      await client.execute({
+        sql: `
+          INSERT INTO applications (
+            id, recruiter, ticket_type, full_name, phone, new_phone, email, city,
+            platforms, vehicle_type, old_vehicle_type, id_card_photo_url, selfie_photo_url,
+            status, rejection_reason, notes, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `,
+        args: [
+          normalizedApp.id,
+          normalizedApp.recruiter,
+          normalizedApp.ticketType,
+          normalizedApp.fullName,
+          normalizedApp.phone,
+          normalizedApp.newPhone || null,
+          normalizedApp.email || null,
+          normalizedApp.city || null,
+          JSON.stringify(normalizedApp.platforms),
+          normalizedApp.vehicleType || null,
+          normalizedApp.oldVehicleType || null,
+          normalizedApp.idCardPhotoUrl || null,
+          normalizedApp.selfiePhotoUrl || null,
+          normalizedApp.status,
+          normalizedApp.rejectionReason || null,
+          normalizedApp.notes || null,
+          normalizedApp.createdAt,
+          normalizedApp.updatedAt || null,
+        ],
+      });
+      return;
+    } catch (err) {
+      console.error("Turso saveApplication error, falling back to local storage:", err);
+    }
+  }
+
+  // Local storage fallback
   memoryStore.unshift(normalizedApp);
   try {
     ensureDirectories();
@@ -71,7 +214,7 @@ export async function saveApplication(app: Application): Promise<void> {
     currentList.unshift(normalizedApp);
     fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(currentList, null, 2), "utf-8");
   } catch (err) {
-    console.warn("Saving to file system failed (serverless fallback active):", err);
+    console.warn("Saving to file system failed:", err);
   }
 }
 
@@ -88,6 +231,73 @@ export async function updateApplication(
   },
   recruiter?: string
 ): Promise<Application | null> {
+  const client = getClient();
+  if (client) {
+    try {
+      await ensureDbTable(client);
+      const existingRes = await client.execute({
+        sql: "SELECT * FROM applications WHERE id = ?",
+        args: [id],
+      });
+      if (existingRes.rows.length === 0) return null;
+      const current = rowToApplication(existingRes.rows[0]);
+
+      if (recruiter && current.recruiter !== recruiter) {
+        return null;
+      }
+
+      const newStatus = updates.status !== undefined ? updates.status : current.status;
+      const newRejection = updates.rejectionReason !== undefined ? updates.rejectionReason : current.rejectionReason;
+      const newPhone = updates.phone !== undefined && updates.phone.trim() ? updates.phone.trim() : current.phone;
+      const newVehicle = updates.vehicleType !== undefined ? updates.vehicleType : current.vehicleType;
+      const newNotes = updates.notes !== undefined ? updates.notes : current.notes;
+      const newIdPhoto = updates.idCardPhotoUrl !== undefined ? updates.idCardPhotoUrl : current.idCardPhotoUrl;
+      const newSelfie = updates.selfiePhotoUrl !== undefined ? updates.selfiePhotoUrl : current.selfiePhotoUrl;
+      const newUpdatedAt = new Date().toISOString();
+
+      await client.execute({
+        sql: `
+          UPDATE applications SET
+            status = ?,
+            rejection_reason = ?,
+            phone = ?,
+            vehicle_type = ?,
+            notes = ?,
+            id_card_photo_url = ?,
+            selfie_photo_url = ?,
+            updated_at = ?
+          WHERE id = ?
+        `,
+        args: [
+          newStatus,
+          newRejection || null,
+          newPhone,
+          newVehicle || null,
+          newNotes || null,
+          newIdPhoto || null,
+          newSelfie || null,
+          newUpdatedAt,
+          id,
+        ],
+      });
+
+      return {
+        ...current,
+        status: newStatus,
+        rejectionReason: newRejection,
+        phone: newPhone,
+        vehicleType: newVehicle,
+        notes: newNotes,
+        idCardPhotoUrl: newIdPhoto,
+        selfiePhotoUrl: newSelfie,
+        updatedAt: newUpdatedAt,
+      };
+    } catch (err) {
+      console.error("Turso updateApplication error, falling back to local storage:", err);
+    }
+  }
+
+  // Local fallback
   let all: Application[] = [];
   try {
     ensureDirectories();
@@ -104,40 +314,23 @@ export async function updateApplication(
   const target = all.find((item) => item.id === id);
   if (!target) return null;
 
-  // Recruiter isolation check
   if (recruiter && (target.recruiter || "glovowolt") !== recruiter) {
     return null;
   }
 
-  if (updates.status !== undefined) {
-    target.status = updates.status;
-  }
-  if (updates.rejectionReason !== undefined) {
-    target.rejectionReason = updates.rejectionReason;
-  }
-  if (updates.phone !== undefined && updates.phone.trim()) {
-    target.phone = updates.phone.trim();
-  }
-  if (updates.vehicleType !== undefined) {
-    target.vehicleType = updates.vehicleType;
-  }
-  if (updates.notes !== undefined) {
-    target.notes = updates.notes;
-  }
-  if (updates.idCardPhotoUrl !== undefined) {
-    target.idCardPhotoUrl = updates.idCardPhotoUrl;
-  }
-  if (updates.selfiePhotoUrl !== undefined) {
-    target.selfiePhotoUrl = updates.selfiePhotoUrl;
-  }
+  if (updates.status !== undefined) target.status = updates.status;
+  if (updates.rejectionReason !== undefined) target.rejectionReason = updates.rejectionReason;
+  if (updates.phone !== undefined && updates.phone.trim()) target.phone = updates.phone.trim();
+  if (updates.vehicleType !== undefined) target.vehicleType = updates.vehicleType;
+  if (updates.notes !== undefined) target.notes = updates.notes;
+  if (updates.idCardPhotoUrl !== undefined) target.idCardPhotoUrl = updates.idCardPhotoUrl;
+  if (updates.selfiePhotoUrl !== undefined) target.selfiePhotoUrl = updates.selfiePhotoUrl;
   target.updatedAt = new Date().toISOString();
 
   try {
     ensureDirectories();
     fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(all, null, 2), "utf-8");
-  } catch (err) {
-    console.warn("Updating file failed, updated memory store only:", err);
-  }
+  } catch {}
 
   memoryStore = all;
   return target;
@@ -154,6 +347,29 @@ export async function updateApplicationStatus(
 }
 
 export async function deleteApplication(id: string, recruiter?: string): Promise<boolean> {
+  const client = getClient();
+  if (client) {
+    try {
+      await ensureDbTable(client);
+      if (recruiter) {
+        const checkRes = await client.execute({
+          sql: "SELECT recruiter FROM applications WHERE id = ?",
+          args: [id],
+        });
+        if (checkRes.rows.length === 0) return false;
+        if (String(checkRes.rows[0].recruiter || "glovowolt") !== recruiter) return false;
+      }
+      const res = await client.execute({
+        sql: "DELETE FROM applications WHERE id = ?",
+        args: [id],
+      });
+      return (res.rowsAffected ?? 1) > 0;
+    } catch (err) {
+      console.error("Turso deleteApplication error:", err);
+    }
+  }
+
+  // Local fallback
   let all: Application[] = [];
   try {
     ensureDirectories();
@@ -170,39 +386,38 @@ export async function deleteApplication(id: string, recruiter?: string): Promise
   const target = all.find((item) => item.id === id);
   if (!target) return false;
 
-  // Recruiter isolation check
   if (recruiter && (target.recruiter || "glovowolt") !== recruiter) {
     return false;
   }
 
   const filtered = all.filter((item) => item.id !== id);
-
   try {
     ensureDirectories();
     fs.writeFileSync(APPLICATIONS_FILE, JSON.stringify(filtered, null, 2), "utf-8");
-  } catch (err) {
-    console.warn("Deleting from file failed:", err);
-  }
+  } catch {}
 
   memoryStore = filtered;
   return true;
 }
 
-/**
- * Saves a base64 encoded image or file data URL to local disk in /public/uploads/
- * Returns public URL (e.g. /uploads/...) or returns the base64 string directly if filesystem isn't writable.
- */
 export async function saveBase64Image(dataUrlOrBase64: string, prefix: string): Promise<string> {
   if (!dataUrlOrBase64) return "";
 
-  // If already a URL, return as is
   if (dataUrlOrBase64.startsWith("http://") || dataUrlOrBase64.startsWith("https://") || dataUrlOrBase64.startsWith("/uploads/")) {
     return dataUrlOrBase64;
   }
 
+  // If running in cloud / Vercel or with Turso DB, store base64 / dataUrl directly in DB column so it's 100% durable!
+  if (process.env.TURSO_DATABASE_URL || process.env.VERCEL) {
+    if (dataUrlOrBase64.startsWith("data:")) {
+      return dataUrlOrBase64;
+    }
+    return `data:image/jpeg;base64,${dataUrlOrBase64}`;
+  }
+
+  // Local development file fallback
   try {
     ensureDirectories();
-
     const matches = dataUrlOrBase64.match(/^data:([^;]+);base64,(.+)$/);
     let extension = "jpg";
     let buffer: Buffer;
