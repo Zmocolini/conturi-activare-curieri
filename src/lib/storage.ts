@@ -83,6 +83,8 @@ export async function updateApplication(
     phone?: string;
     vehicleType?: VehicleType;
     notes?: string;
+    idCardPhotoUrl?: string;
+    selfiePhotoUrl?: string;
   },
   recruiter?: string
 ): Promise<Application | null> {
@@ -121,6 +123,12 @@ export async function updateApplication(
   }
   if (updates.notes !== undefined) {
     target.notes = updates.notes;
+  }
+  if (updates.idCardPhotoUrl !== undefined) {
+    target.idCardPhotoUrl = updates.idCardPhotoUrl;
+  }
+  if (updates.selfiePhotoUrl !== undefined) {
+    target.selfiePhotoUrl = updates.selfiePhotoUrl;
   }
   target.updatedAt = new Date().toISOString();
 

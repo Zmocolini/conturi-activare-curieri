@@ -87,6 +87,18 @@ export default function UnifiedManagerPage() {
     reason: string;
   } | null>(null);
 
+  // Update Photos Modal State (schimbare vehicul acte / poze suplimentare)
+  const [photoUpdateModal, setPhotoUpdateModal] = useState<{
+    open: boolean;
+    appId: string;
+    courierName: string;
+    ticketType: TicketType;
+    idCardPhoto: string;
+    selfiePhoto: string;
+  } | null>(null);
+  const [isSavingPhotos, setIsSavingPhotos] = useState(false);
+  const [photoUpdateError, setPhotoUpdateError] = useState("");
+
   // High-res preview modal
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
 
@@ -197,9 +209,59 @@ export default function UnifiedManagerPage() {
 
   const openNewTicketModal = (type: TicketType) => {
     setFormTicketType(type);
+    setFormFullName("");
+    setFormPhone("");
+    setFormNewPhone("");
+    setFormEmail("");
+    setFormIdCardPhoto("");
+    setFormSelfiePhoto("");
+    setFormNotes("");
     setSubmitError("");
     setSubmitSuccessMsg("");
     setIsAddModalOpen(true);
+  };
+
+  const handleSaveUpdatedPhotos = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!photoUpdateModal) return;
+
+    if (!photoUpdateModal.idCardPhoto && !photoUpdateModal.selfiePhoto) {
+      setPhotoUpdateError("Alege cel puțin un document sau o poză de încărcat.");
+      return;
+    }
+
+    try {
+      setIsSavingPhotos(true);
+      setPhotoUpdateError("");
+      const res = await fetch(`/api/applications/${photoUpdateModal.appId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idCardPhoto: photoUpdateModal.idCardPhoto || undefined,
+          selfiePhoto: photoUpdateModal.selfiePhoto || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Eroare la actualizarea pozelor.");
+      }
+
+      if (data.application) {
+        setApplications((prev) =>
+          prev.map((item) => (item.id === data.application.id ? data.application : item))
+        );
+      }
+      setPhotoUpdateModal(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setPhotoUpdateError(err.message);
+      } else {
+        setPhotoUpdateError("Eroare la salvarea pozelor.");
+      }
+    } finally {
+      setIsSavingPhotos(false);
+    }
   };
 
   const handleCreateTicket = async (e: React.FormEvent) => {
@@ -241,6 +303,10 @@ export default function UnifiedManagerPage() {
       }
       if (formOldVehicleType === formVehicleType) {
         setSubmitError("Vehiculul nou trebuie să fie diferit de vehiculul actual.");
+        return;
+      }
+      if (formPlatforms.includes("glovo") && !formIdCardPhoto) {
+        setSubmitError("Pentru Glovo este obligatoriu să încarci actele vehiculului (talon / asigurare sau buletin).");
         return;
       }
     } else if (formTicketType === "schimbare_telefon") {
@@ -1066,77 +1132,106 @@ export default function UnifiedManagerPage() {
                   )}
                 </div>
 
-                {/* Column 2: Documents (Buletin & Selfie dacă există) */}
-                <div className="flex items-center gap-3 shrink-0">
-                  {/* Poza Buletin dacă a fost încărcată */}
-                  {app.idCardPhotoUrl ? (
-                    <div className="text-center">
-                      <div
-                        onClick={() =>
-                          setPreviewImage({
-                            url: app.idCardPhotoUrl!,
-                            title: `Buletin - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
-                          })
-                        }
-                        className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
-                      >
-                        {app.idCardPhotoUrl.toLowerCase().includes(".pdf") ||
-                        app.idCardPhotoUrl.startsWith("data:application/pdf") ? (
-                          <div className="w-full h-full bg-rose-50 flex flex-col items-center justify-center p-1 text-rose-600">
-                            <FileText className="w-7 h-7 text-rose-500 mb-0.5" />
-                            <span className="text-[10px] font-bold">PDF Buletin</span>
+                {/* Column 2: Documents (Buletin, Talon & Poze Vehicul) */}
+                <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-3">
+                    {/* Poza Buletin / Talon dacă a fost încărcată */}
+                    {app.idCardPhotoUrl ? (
+                      <div className="text-center">
+                        <div
+                          onClick={() =>
+                            setPreviewImage({
+                              url: app.idCardPhotoUrl!,
+                              title: `${app.ticketType === "schimbare_vehicul" ? "Acte / Talon Vehicul" : "Buletin"} - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
+                            })
+                          }
+                          className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
+                        >
+                          {app.idCardPhotoUrl.toLowerCase().includes(".pdf") ||
+                          app.idCardPhotoUrl.startsWith("data:application/pdf") ? (
+                            <div className="w-full h-full bg-rose-50 flex flex-col items-center justify-center p-1 text-rose-600">
+                              <FileText className="w-7 h-7 text-rose-500 mb-0.5" />
+                              <span className="text-[10px] font-bold">PDF Document</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={app.idCardPhotoUrl}
+                              alt="Document 1"
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Eye className="w-5 h-5" />
                           </div>
-                        ) : (
-                          <img
-                            src={app.idCardPhotoUrl}
-                            alt="Poza Buletin"
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                          <Eye className="w-5 h-5" />
                         </div>
+                        <span className="text-[11px] font-semibold text-slate-500 block mt-1">
+                          {app.ticketType === "schimbare_vehicul" ? "Acte / Talon" : "Poza Buletin"}
+                        </span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 block mt-1">
-                        Poza Buletin
-                      </span>
-                    </div>
-                  ) : null}
+                    ) : null}
 
-                  {/* Selfie cu Buletinul dacă a fost încărcat */}
-                  {app.selfiePhotoUrl ? (
-                    <div className="text-center">
-                      <div
-                        onClick={() =>
-                          setPreviewImage({
-                            url: app.selfiePhotoUrl!,
-                            title: `Selfie cu buletinul - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
-                          })
-                        }
-                        className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
-                      >
-                        {app.selfiePhotoUrl.toLowerCase().includes(".pdf") ||
-                        app.selfiePhotoUrl.startsWith("data:application/pdf") ? (
-                          <div className="w-full h-full bg-rose-50 flex flex-col items-center justify-center p-1 text-rose-600">
-                            <FileText className="w-7 h-7 text-rose-500 mb-0.5" />
-                            <span className="text-[10px] font-bold">PDF Selfie</span>
+                    {/* Selfie cu Buletinul / Poză Vehicul dacă a fost încărcat */}
+                    {app.selfiePhotoUrl ? (
+                      <div className="text-center">
+                        <div
+                          onClick={() =>
+                            setPreviewImage({
+                              url: app.selfiePhotoUrl!,
+                              title: `${app.ticketType === "schimbare_vehicul" ? "Poză Vehicul" : "Selfie cu buletinul"} - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
+                            })
+                          }
+                          className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
+                        >
+                          {app.selfiePhotoUrl.toLowerCase().includes(".pdf") ||
+                          app.selfiePhotoUrl.startsWith("data:application/pdf") ? (
+                            <div className="w-full h-full bg-rose-50 flex flex-col items-center justify-center p-1 text-rose-600">
+                              <FileText className="w-7 h-7 text-rose-500 mb-0.5" />
+                              <span className="text-[10px] font-bold">PDF Document</span>
+                            </div>
+                          ) : (
+                            <img
+                              src={app.selfiePhotoUrl}
+                              alt="Document 2"
+                              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <Eye className="w-5 h-5" />
                           </div>
-                        ) : (
-                          <img
-                            src={app.selfiePhotoUrl}
-                            alt="Selfie cu Buletin"
-                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                          />
-                        )}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                          <Eye className="w-5 h-5" />
                         </div>
+                        <span className="text-[11px] font-semibold text-slate-500 block mt-1">
+                          {app.ticketType === "schimbare_vehicul" ? "Poză Vehicul" : "Selfie Buletin"}
+                        </span>
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 block mt-1">
-                        Selfie Buletin
-                      </span>
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </div>
+
+                  {/* Buton Încarcă / Actualizează Poze (pentru schimbare vehicul sau completare documente) */}
+                  <div className="flex flex-col items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPhotoUpdateError("");
+                        setPhotoUpdateModal({
+                          open: true,
+                          appId: app.id,
+                          courierName: app.fullName,
+                          ticketType: app.ticketType,
+                          idCardPhoto: "",
+                          selfiePhoto: "",
+                        });
+                      }}
+                      className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl border transition flex items-center gap-1 active:scale-95 ${
+                        app.ticketType === "schimbare_vehicul"
+                          ? "bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200"
+                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                      }`}
+                      title="Încarcă sau actualizează pozele documentelor"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>{app.idCardPhotoUrl || app.selfiePhotoUrl ? "Modifică Poze" : "Adaugă Poze"}</span>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Column 3: Actions & Synchronized Status */}
@@ -1267,6 +1362,105 @@ export default function UnifiedManagerPage() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 1.5: ACTUALIZARE POZE / DOCUMENTE VEHICUL SAU BULETIN */}
+      {photoUpdateModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          onClick={() => !isSavingPhotos && setPhotoUpdateModal(null)}
+        >
+          <div
+            className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl p-6 border border-slate-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
+                  <Car className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">
+                    Încarcă / Actualizează Documente
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Curier: <span className="font-bold text-slate-800">{photoUpdateModal.courierName}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSavingPhotos && setPhotoUpdateModal(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUpdatedPhotos} className="mt-4 space-y-4">
+              <p className="text-xs text-slate-600">
+                Atașează documentele necesare (pentru Glovo: talonul sau asigurarea noului vehicul, buletin sau poză vehicul). Se acceptă fișiere JPG, PNG sau PDF.
+              </p>
+
+              <div className="space-y-3">
+                <ImageUploadField
+                  id="update_modal_doc1"
+                  label="Document 1 / Talon / Acte Vehicul / Buletin"
+                  description="Poză sau fișier PDF cu talonul sau actul de identitate"
+                  value={photoUpdateModal.idCardPhoto}
+                  onChange={(val) =>
+                    setPhotoUpdateModal((prev) => (prev ? { ...prev, idCardPhoto: val } : null))
+                  }
+                />
+
+                <ImageUploadField
+                  id="update_modal_doc2"
+                  label="Document 2 / Poză Noul Vehicul / Selfie"
+                  description="Poză cu vehiculul sau selfie curier"
+                  value={photoUpdateModal.selfiePhoto}
+                  onChange={(val) =>
+                    setPhotoUpdateModal((prev) => (prev ? { ...prev, selfiePhoto: val } : null))
+                  }
+                />
+              </div>
+
+              {photoUpdateError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{photoUpdateError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  disabled={isSavingPhotos}
+                  onClick={() => setPhotoUpdateModal(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                >
+                  Anulează
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingPhotos}
+                  className="px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs transition flex items-center gap-1.5 shadow-sm"
+                >
+                  {isSavingPhotos ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Se salvează...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Salvează Pozele</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -1513,6 +1707,41 @@ export default function UnifiedManagerPage() {
                         <option value="scuter">🛵 Scuter</option>
                         <option value="bicicleta">🚲 Bicicletă</option>
                       </select>
+                    </div>
+                  </div>
+
+                  {/* Încărcare Poze Acte Vehicul / Buletin (Necesar pentru Glovo) */}
+                  <div className="pt-3 border-t border-purple-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-purple-700" />
+                        <span>Poze Documente Noul Vehicul / Buletin (Necesar Glovo)</span>
+                      </label>
+                      <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
+                        {formPlatforms.includes("glovo") ? "Obligatoriu Glovo" : "Opțional"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-purple-900/80">
+                      Pentru Glovo se cer documentele noului autovehicul (talon, asigurare, buletin). Poți încărca fișiere JPG, PNG sau PDF.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <ImageUploadField
+                        id="modal_vehicul_doc1"
+                        label="Document 1 / Talon / Acte Vehicul *"
+                        description="Poză sau fișier PDF cu talonul sau actele noului vehicul"
+                        value={formIdCardPhoto}
+                        onChange={setFormIdCardPhoto}
+                        badge={formPlatforms.includes("glovo") ? "Necesar Glovo" : "Opțional"}
+                      />
+                      <ImageUploadField
+                        id="modal_vehicul_doc2"
+                        label="Document 2 / Poză Vehicul sau Buletin"
+                        description="Poză cu vehiculul, buletinul sau selfie curier"
+                        value={formSelfiePhoto}
+                        onChange={setFormSelfiePhoto}
+                        badge="Opțional"
+                      />
                     </div>
                   </div>
                 </div>

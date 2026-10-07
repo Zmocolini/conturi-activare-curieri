@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateApplication, deleteApplication } from "@/lib/storage";
+import { updateApplication, deleteApplication, saveBase64Image } from "@/lib/storage";
 import { ApplicationStatus, VehicleType } from "@/lib/types";
 import { getCurrentUser } from "@/lib/auth";
 
@@ -15,7 +15,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await req.json();
-    const { status, notes, rejectionReason, phone, vehicleType } = body;
+    const { status, notes, rejectionReason, phone, vehicleType, idCardPhoto, selfiePhoto } = body;
 
     const validStatuses: ApplicationStatus[] = ["nou", "in_lucru", "activat", "respins"];
     if (status && !validStatuses.includes(status)) {
@@ -25,6 +25,16 @@ export async function PATCH(
     const validVehicles: VehicleType[] = ["masina", "scuter", "bicicleta"];
     if (vehicleType && !validVehicles.includes(vehicleType)) {
       return NextResponse.json({ success: false, message: "Vehicul invalid" }, { status: 400 });
+    }
+
+    let idCardPhotoUrl: string | undefined = undefined;
+    if (idCardPhoto) {
+      idCardPhotoUrl = await saveBase64Image(idCardPhoto, "buletin_sau_talon");
+    }
+
+    let selfiePhotoUrl: string | undefined = undefined;
+    if (selfiePhoto) {
+      selfiePhotoUrl = await saveBase64Image(selfiePhoto, "selfie_sau_vehicul");
     }
 
     // If admin, can update any; if recruiter, only their own
@@ -37,6 +47,8 @@ export async function PATCH(
         rejectionReason,
         phone,
         vehicleType,
+        ...(idCardPhotoUrl !== undefined ? { idCardPhotoUrl } : {}),
+        ...(selfiePhotoUrl !== undefined ? { selfiePhotoUrl } : {}),
       },
       recruiterCheck
     );
