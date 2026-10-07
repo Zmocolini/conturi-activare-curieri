@@ -3,6 +3,13 @@ import { AUTH_COOKIE_NAME } from "@/lib/auth";
 
 export async function POST() {
   const response = NextResponse.json({ success: true, message: "Deconectat cu succes" });
-  response.cookies.delete(AUTH_COOKIE_NAME);
+  response.cookies.set({
+    name: AUTH_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    maxAge: 0,
+    path: "/",
+    sameSite: "lax",
+  });
   return response;
 }
