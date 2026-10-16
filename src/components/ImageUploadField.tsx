@@ -19,24 +19,31 @@ async function processFile(file: File): Promise<string> {
   const isPdf =
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
-  // If PDF, directly read as data URL without canvas
+  // If PDF, check size and read as data URL
   if (isPdf) {
+    const maxPdfBytes = 2.5 * 1024 * 1024;
+    if (file.size > maxPdfBytes) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      throw new Error(
+        `Fișierul PDF este prea mare (${sizeMb} MB). Limita maximă recomandată pentru PDF este de 2.5 MB pentru a asigura încărcarea rapidă. Te rugăm să folosești un PDF mai mic sau o poză a documentului.`
+      );
+    }
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
+      reader.onerror = () => reject(new Error("Eroare la citirea fișierului PDF."));
       reader.readAsDataURL(file);
     });
   }
 
-  // If image, compress via canvas
+  // If image, compress via canvas to 1280px max and 0.75 quality (~150KB - 250KB)
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const maxWidth = 1920;
-        const maxHeight = 1920;
+        const maxWidth = 1280;
+        const maxHeight = 1280;
         let { width, height } = img;
 
         if (width > maxWidth || height > maxHeight) {
@@ -58,17 +65,25 @@ async function processFile(file: File): Promise<string> {
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        // Compress as JPEG 0.85
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        // Compress as JPEG 0.75 for optimal quality/size ratio
+        let dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+        // If dataUrl is still larger than ~1MB (base64 string > 1.3M chars), re-compress at 0.60
+        if (dataUrl.length > 1.3 * 1024 * 1024) {
+          dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+        }
         resolve(dataUrl);
       };
       img.onerror = () => {
-        // Fallback to raw data url if image element fails
-        resolve(event.target?.result as string);
+        const rawResult = event.target?.result as string;
+        if (rawResult && rawResult.length > 2.5 * 1024 * 1024) {
+          reject(new Error("Imaginea este prea mare și nu a putut fi optimizată. Te rugăm să încarci un format standard JPG sau PNG."));
+        } else {
+          resolve(rawResult);
+        }
       };
       img.src = event.target?.result as string;
     };
-    reader.onerror = reject;
+    reader.onerror = () => reject(new Error("Eroare la citirea imaginii."));
     reader.readAsDataURL(file);
   });
 }
@@ -101,7 +116,11 @@ export default function ImageUploadField({
       onChange(dataUrl);
     } catch (err) {
       console.error("Error processing file:", err);
-      alert("A apărut o problemă la încărcarea fișierului. Te rugăm să încerci din nou.");
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "A apărut o problemă la încărcarea fișierului. Te rugăm să încerci din nou.";
+      alert(msg);
     } finally {
       setIsProcessing(false);
       if (fileInputRef.current) {
@@ -151,7 +170,7 @@ export default function ImageUploadField({
           {isProcessing ? (
             <div className="flex flex-col items-center py-4">
               <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mb-2" />
-              <span className="text-sm font-medium text-slate-600">Se procesează documentul...</span>
+              <span className="text-sm font-medium text-slate-600">Se optimizează fișierul...</span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
@@ -162,7 +181,7 @@ export default function ImageUploadField({
                 <p className="text-sm font-semibold text-slate-700 group-hover:text-amber-600 transition-colors">
                   Apasă pentru a alege fișierul (Poză sau PDF)
                 </p>
-                <p className="text-xs text-slate-400 mt-1">Acceptă format PDF, JPG, PNG, WEBP</p>
+                <p className="text-xs text-slate-400 mt-1">Acceptă PDF (max 2.5MB) sau Poze JPG, PNG (optimizate automat)</p>
               </div>
               {exampleHint && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs mt-1">

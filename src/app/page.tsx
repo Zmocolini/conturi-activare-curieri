@@ -33,6 +33,24 @@ import {
 import ImageUploadField from "@/components/ImageUploadField";
 import { Application, ApplicationStatus, PlatformType, VehicleType, TicketType } from "@/lib/types";
 
+async function parseJsonResponse(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    if (
+      res.status === 413 ||
+      text.toLowerCase().includes("request entity too large") ||
+      text.toLowerCase().includes("payload too large")
+    ) {
+      throw new Error(
+        "Documentele sau pozele încărcate sunt prea mari (depășesc limita permisă de server). Te rugăm să încarci fișiere mai mici."
+      );
+    }
+    throw new Error(`Eroare de la server (Status: ${res.status}). Te rugăm să reîncerci.`);
+  }
+}
+
 export default function UnifiedManagerPage() {
   const [currentUser, setCurrentUser] = useState<{
     username: string;
@@ -110,7 +128,7 @@ export default function UnifiedManagerPage() {
     try {
       setIsCheckingAuth(true);
       const res = await fetch("/api/auth/me");
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (res.ok && data.authenticated && data.user) {
         setCurrentUser(data.user);
         fetchApplications();
@@ -143,7 +161,7 @@ export default function UnifiedManagerPage() {
           password: loginPassword,
         }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Date de autentificare incorecte.");
       }
@@ -178,7 +196,7 @@ export default function UnifiedManagerPage() {
       setIsLoading(true);
       setError("");
       const res = await fetch("/api/applications");
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok || !data.success) {
         if (res.status === 401) {
           setCurrentUser(null);
@@ -225,8 +243,10 @@ export default function UnifiedManagerPage() {
     e.preventDefault();
     if (!photoUpdateModal) return;
 
-    if (!photoUpdateModal.idCardPhoto && !photoUpdateModal.selfiePhoto) {
-      setPhotoUpdateError("Alege cel puțin un document sau o poză de încărcat.");
+    const totalMediaSize =
+      (photoUpdateModal.idCardPhoto?.length || 0) + (photoUpdateModal.selfiePhoto?.length || 0);
+    if (totalMediaSize > 3.8 * 1024 * 1024) {
+      setPhotoUpdateError("Dimensiunea fișierelor este prea mare. Te rugăm să înlocuiești cu poze sau fișiere mai mici.");
       return;
     }
 
@@ -242,7 +262,7 @@ export default function UnifiedManagerPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Eroare la actualizarea pozelor.");
       }
@@ -324,6 +344,12 @@ export default function UnifiedManagerPage() {
       }
     }
 
+    const totalMediaSize = (formIdCardPhoto?.length || 0) + (formSelfiePhoto?.length || 0);
+    if (totalMediaSize > 3.8 * 1024 * 1024) {
+      setSubmitError("Dimensiunea documentelor încărcate este prea mare. Te rugăm să folosești fișiere sau poze mai mici.");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const res = await fetch("/api/applications", {
@@ -346,7 +372,7 @@ export default function UnifiedManagerPage() {
         }),
       });
 
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Eroare la crearea tichetului.");
       }
@@ -405,7 +431,7 @@ export default function UnifiedManagerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (res.ok && data.success) {
         setApplications((prev) =>
           prev.map((app) => (app.id === id ? { ...app, status: newStatus } : app))
@@ -413,8 +439,9 @@ export default function UnifiedManagerPage() {
       } else {
         alert("Eroare la actualizarea statusului: " + (data.message || ""));
       }
-    } catch {
-      alert("Eroare de rețea la actualizarea statusului.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Eroare la actualizarea statusului.";
+      alert(msg);
     }
   };
 
@@ -430,7 +457,7 @@ export default function UnifiedManagerPage() {
           rejectionReason: rejectModal.reason.trim() || "Respins (fără motiv specificat)",
         }),
       });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (res.ok && data.success) {
         setApplications((prev) =>
           prev.map((app) =>
@@ -447,8 +474,9 @@ export default function UnifiedManagerPage() {
       } else {
         alert("Eroare la respingere: " + (data.message || ""));
       }
-    } catch {
-      alert("Eroare de rețea.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Eroare la respingerea tichetului.";
+      alert(msg);
     }
   };
 
@@ -457,14 +485,15 @@ export default function UnifiedManagerPage() {
 
     try {
       const res = await fetch(`/api/applications/${id}`, { method: "DELETE" });
-      const data = await res.json();
+      const data = await parseJsonResponse(res);
       if (res.ok && data.success) {
         setApplications((prev) => prev.filter((app) => app.id !== id));
       } else {
         alert("Eroare la ștergerea cererii: " + (data.message || ""));
       }
-    } catch {
-      alert("Eroare de rețea la ștergere.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Eroare la ștergerea cererii.";
+      alert(msg);
     }
   };
 
