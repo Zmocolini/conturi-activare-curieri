@@ -119,6 +119,7 @@ export default function UnifiedManagerPage() {
 
   // High-res preview modal
   const [previewImage, setPreviewImage] = useState<{ url: string; title: string } | null>(null);
+  const [previewZoom, setPreviewZoom] = useState<number>(1);
 
   useEffect(() => {
     checkAuth();
@@ -243,33 +244,69 @@ export default function UnifiedManagerPage() {
     e.preventDefault();
     if (!photoUpdateModal) return;
 
-    const totalMediaSize =
-      (photoUpdateModal.idCardPhoto?.length || 0) + (photoUpdateModal.selfiePhoto?.length || 0);
-    if (totalMediaSize > 3.8 * 1024 * 1024) {
-      setPhotoUpdateError("Dimensiunea fișierelor este prea mare. Te rugăm să înlocuiești cu poze sau fișiere mai mici.");
+    if (!photoUpdateModal.idCardPhoto && !photoUpdateModal.selfiePhoto) {
+      setPhotoUpdateError("Alege cel puțin un document sau o poză de încărcat.");
+      return;
+    }
+
+    const idLen = photoUpdateModal.idCardPhoto?.length || 0;
+    const selfieLen = photoUpdateModal.selfiePhoto?.length || 0;
+    if (idLen > 4 * 1024 * 1024 || selfieLen > 4 * 1024 * 1024) {
+      setPhotoUpdateError("Unul dintre fișiere depășește limita de 3.8 MB. Te rugăm să alegi un fișier mai mic.");
       return;
     }
 
     try {
       setIsSavingPhotos(true);
       setPhotoUpdateError("");
-      const res = await fetch(`/api/applications/${photoUpdateModal.appId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idCardPhoto: photoUpdateModal.idCardPhoto || undefined,
-          selfiePhoto: photoUpdateModal.selfiePhoto || undefined,
-        }),
-      });
 
-      const data = await parseJsonResponse(res);
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Eroare la actualizarea pozelor.");
+      let latestApp = null;
+      const shouldSplit =
+        photoUpdateModal.idCardPhoto &&
+        photoUpdateModal.selfiePhoto &&
+        idLen + selfieLen > 3 * 1024 * 1024;
+
+      if (shouldSplit) {
+        const res1 = await fetch(`/api/applications/${photoUpdateModal.appId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idCardPhoto: photoUpdateModal.idCardPhoto }),
+        });
+        const data1 = await parseJsonResponse(res1);
+        if (!res1.ok || !data1.success) {
+          throw new Error(data1.message || "Eroare la actualizarea primului document.");
+        }
+
+        const res2 = await fetch(`/api/applications/${photoUpdateModal.appId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selfiePhoto: photoUpdateModal.selfiePhoto }),
+        });
+        const data2 = await parseJsonResponse(res2);
+        if (!res2.ok || !data2.success) {
+          throw new Error(data2.message || "Eroare la actualizarea celei de-a doua poze.");
+        }
+        latestApp = data2.application;
+      } else {
+        const res = await fetch(`/api/applications/${photoUpdateModal.appId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idCardPhoto: photoUpdateModal.idCardPhoto || undefined,
+            selfiePhoto: photoUpdateModal.selfiePhoto || undefined,
+          }),
+        });
+
+        const data = await parseJsonResponse(res);
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || "Eroare la actualizarea pozelor.");
+        }
+        latestApp = data.application;
       }
 
-      if (data.application) {
+      if (latestApp) {
         setApplications((prev) =>
-          prev.map((item) => (item.id === data.application.id ? data.application : item))
+          prev.map((item) => (item.id === latestApp.id ? latestApp : item))
         );
       }
       setPhotoUpdateModal(null);
@@ -344,14 +381,19 @@ export default function UnifiedManagerPage() {
       }
     }
 
-    const totalMediaSize = (formIdCardPhoto?.length || 0) + (formSelfiePhoto?.length || 0);
-    if (totalMediaSize > 3.8 * 1024 * 1024) {
-      setSubmitError("Dimensiunea documentelor încărcate este prea mare. Te rugăm să folosești fișiere sau poze mai mici.");
+    const idLen = formIdCardPhoto?.length || 0;
+    const selfieLen = formSelfiePhoto?.length || 0;
+    if (idLen > 4 * 1024 * 1024 || selfieLen > 4 * 1024 * 1024) {
+      setSubmitError("Unul dintre documente depășește limita de 3.8 MB. Te rugăm să folosești un fișier mai mic.");
       return;
     }
 
     try {
       setIsSubmitting(true);
+      const shouldDeferSelfie = Boolean(
+        formIdCardPhoto && formSelfiePhoto && idLen + selfieLen > 3 * 1024 * 1024
+      );
+
       const res = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -367,7 +409,8 @@ export default function UnifiedManagerPage() {
           vehicleType: formVehicleType,
           oldVehicleType: formOldVehicleType,
           idCardPhoto: formIdCardPhoto,
-          selfiePhoto: formSelfiePhoto,
+          selfiePhoto: shouldDeferSelfie ? "" : formSelfiePhoto,
+          deferredSelfie: shouldDeferSelfie,
           notes: formNotes,
         }),
       });
@@ -377,8 +420,22 @@ export default function UnifiedManagerPage() {
         throw new Error(data.message || "Eroare la crearea tichetului.");
       }
 
-      if (data.application) {
-        setApplications((prev) => [data.application, ...prev]);
+      let finalApp = data.application;
+
+      if (shouldDeferSelfie && finalApp?.id) {
+        const patchRes = await fetch(`/api/applications/${finalApp.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ selfiePhoto: formSelfiePhoto }),
+        });
+        const patchData = await parseJsonResponse(patchRes);
+        if (patchRes.ok && patchData.application) {
+          finalApp = patchData.application;
+        }
+      }
+
+      if (finalApp) {
+        setApplications((prev) => [finalApp, ...prev]);
       } else {
         fetchApplications();
       }
@@ -2031,16 +2088,40 @@ export default function UnifiedManagerPage() {
       {/* High-Resolution Document Preview Modal (Image or PDF) */}
       {previewImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4"
+          onClick={() => {
+            setPreviewImage(null);
+            setPreviewZoom(1);
+          }}
         >
           <div
-            className="relative max-w-4xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            className="relative max-w-5xl w-full bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[94vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-3 sm:p-4 border-b border-slate-100 bg-white">
               <h3 className="font-bold text-slate-900 text-sm">{previewImage.title}</h3>
               <div className="flex items-center gap-2">
+                {!(
+                  previewImage.url.toLowerCase().includes(".pdf") ||
+                  previewImage.url.startsWith("data:application/pdf")
+                ) && (
+                  <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+                    {[1, 1.5, 2, 3].map((z) => (
+                      <button
+                        key={z}
+                        type="button"
+                        onClick={() => setPreviewZoom(z)}
+                        className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
+                          previewZoom === z
+                            ? "bg-slate-900 text-white shadow-sm"
+                            : "text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {z}x
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <a
                   href={previewImage.url}
                   download={
@@ -2058,7 +2139,10 @@ export default function UnifiedManagerPage() {
                 </a>
                 <button
                   type="button"
-                  onClick={() => setPreviewImage(null)}
+                  onClick={() => {
+                    setPreviewImage(null);
+                    setPreviewZoom(1);
+                  }}
                   className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition"
                 >
                   <XCircle className="w-5 h-5" />
@@ -2071,15 +2155,27 @@ export default function UnifiedManagerPage() {
               previewImage.url.startsWith("data:application/pdf") ? (
                 <iframe
                   src={previewImage.url}
-                  className="w-full h-[75vh] bg-white rounded-lg border-0 shadow-lg"
+                  className="w-full h-[80vh] bg-white rounded-lg border-0 shadow-lg"
                   title={previewImage.title}
                 />
               ) : (
-                <img
-                  src={previewImage.url}
-                  alt={previewImage.title}
-                  className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-lg"
-                />
+                <div className="overflow-auto max-w-full max-h-[82vh] flex items-center justify-center">
+                  <img
+                    src={previewImage.url}
+                    alt={previewImage.title}
+                    onClick={() => setPreviewZoom((prev) => (prev >= 2.5 ? 1 : prev + 0.75))}
+                    style={
+                      previewZoom > 1
+                        ? { width: `${previewZoom * 100}%`, maxWidth: "none", maxHeight: "none" }
+                        : undefined
+                    }
+                    className={`rounded-lg shadow-lg transition-all ${
+                      previewZoom === 1
+                        ? "max-w-full max-h-[80vh] object-contain cursor-zoom-in"
+                        : "cursor-zoom-out"
+                    }`}
+                  />
+                </div>
               )}
             </div>
           </div>

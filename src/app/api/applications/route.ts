@@ -74,7 +74,7 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
-      if (!body.selfiePhoto) {
+      if (!body.selfiePhoto && !(body as any).deferredSelfie) {
         return NextResponse.json(
           { success: false, message: "Selfie-ul cu buletinul în mână este obligatoriu." },
           { status: 400 }

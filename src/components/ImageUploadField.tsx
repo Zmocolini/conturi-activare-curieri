@@ -14,18 +14,18 @@ interface ImageUploadFieldProps {
   badge?: string;
 }
 
-// Compress image on client side using canvas to avoid giant phone camera uploads
+// Process file: keep original untouched if <= 2.5MB, otherwise gently resize preserving exact aspect ratio
 async function processFile(file: File): Promise<string> {
   const isPdf =
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
   // If PDF, check size and read as data URL
   if (isPdf) {
-    const maxPdfBytes = 2.5 * 1024 * 1024;
+    const maxPdfBytes = 3.8 * 1024 * 1024;
     if (file.size > maxPdfBytes) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
       throw new Error(
-        `Fișierul PDF este prea mare (${sizeMb} MB). Limita maximă recomandată pentru PDF este de 2.5 MB pentru a asigura încărcarea rapidă. Te rugăm să folosești un PDF mai mic sau o poză a documentului.`
+        `Fișierul PDF este prea mare (${sizeMb} MB). Limita maximă pentru PDF este de 3.8 MB. Te rugăm să folosești un PDF mai mic sau o poză a documentului.`
       );
     }
     return new Promise((resolve, reject) => {
@@ -36,14 +36,24 @@ async function processFile(file: File): Promise<string> {
     });
   }
 
-  // If image, compress via canvas to 1280px max and 0.75 quality (~150KB - 250KB)
+  // If image is already <= 2.5 MB, keep 100% original file untouched (no canvas, no quality loss, no format change!)
+  if (file.size <= 2.5 * 1024 * 1024) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Eroare la citirea imaginii."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Only if image is > 2.5 MB (e.g. raw 10MB camera photo), resize proportionally to 2560px at high quality (0.92)
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
-        const maxWidth = 1280;
-        const maxHeight = 1280;
+        const maxWidth = 2560;
+        const maxHeight = 2560;
         let { width, height } = img;
 
         if (width > maxWidth || height > maxHeight) {
@@ -52,6 +62,7 @@ async function processFile(file: File): Promise<string> {
             width = maxWidth;
           } else {
             width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
           }
         }
 
@@ -65,17 +76,16 @@ async function processFile(file: File): Promise<string> {
         }
 
         ctx.drawImage(img, 0, 0, width, height);
-        // Compress as JPEG 0.75 for optimal quality/size ratio
-        let dataUrl = canvas.toDataURL("image/jpeg", 0.75);
-        // If dataUrl is still larger than ~1MB (base64 string > 1.3M chars), re-compress at 0.60
-        if (dataUrl.length > 1.3 * 1024 * 1024) {
-          dataUrl = canvas.toDataURL("image/jpeg", 0.6);
+        // High quality 0.92 JPEG
+        let dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        if (dataUrl.length > 3.2 * 1024 * 1024) {
+          dataUrl = canvas.toDataURL("image/jpeg", 0.85);
         }
         resolve(dataUrl);
       };
       img.onerror = () => {
         const rawResult = event.target?.result as string;
-        if (rawResult && rawResult.length > 2.5 * 1024 * 1024) {
+        if (rawResult && rawResult.length > 3.8 * 1024 * 1024) {
           reject(new Error("Imaginea este prea mare și nu a putut fi optimizată. Te rugăm să încarci un format standard JPG sau PNG."));
         } else {
           resolve(rawResult);
