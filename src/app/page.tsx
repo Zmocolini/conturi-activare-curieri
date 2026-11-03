@@ -218,16 +218,16 @@ export default function UnifiedManagerPage() {
   };
 
   const togglePlatform = (p: PlatformType) => {
-    if (formPlatforms.includes(p)) {
-      if (formPlatforms.length === 1) return;
-      setFormPlatforms(formPlatforms.filter((item) => item !== p));
-    } else {
-      setFormPlatforms([...formPlatforms, p]);
-    }
+    setFormPlatforms([p]);
   };
 
-  const openNewTicketModal = (type: TicketType) => {
+  const openNewTicketModal = (type: TicketType, platform?: PlatformType) => {
     setFormTicketType(type);
+    if (platform) {
+      setFormPlatforms([platform]);
+    } else if (formPlatforms.length !== 1) {
+      setFormPlatforms(["glovo"]);
+    }
     setFormFullName("");
     setFormPhone("");
     setFormNewPhone("");
@@ -806,24 +806,39 @@ export default function UnifiedManagerPage() {
               </div>
             </div>
 
-            {/* 3 Prominent Ticket Creation Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
-              {/* Button 1: Activare Cont Nou */}
+            {/* 4 Prominent Ticket Creation Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
+              {/* Button 1: Activare Cont Glovo */}
               <button
                 type="button"
-                onClick={() => openNewTicketModal("activare_cont")}
+                onClick={() => openNewTicketModal("activare_cont", "glovo")}
                 className="p-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
               >
                 <div className="w-10 h-10 rounded-xl bg-amber-500/30 flex items-center justify-center shrink-0">
                   <Plus className="w-6 h-6 stroke-[3]" />
                 </div>
                 <div>
-                  <div className="font-black text-amber-950">Tichet: Activare Cont</div>
-                  <div className="text-[11px] text-amber-900/80 font-medium">Buletin, selfie, date curier nou</div>
+                  <div className="font-black text-amber-950">Tichet: Activare Glovo</div>
+                  <div className="text-[11px] text-amber-900/80 font-medium">Buletin, selfie, curier nou Glovo</div>
                 </div>
               </button>
 
-              {/* Button 2: Schimbare Autovehicul */}
+              {/* Button 2: Activare Cont Wolt */}
+              <button
+                type="button"
+                onClick={() => openNewTicketModal("activare_cont", "wolt")}
+                className="p-4 rounded-2xl bg-cyan-500 hover:bg-cyan-600 text-white font-black text-xs sm:text-sm transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Plus className="w-6 h-6 stroke-[3] text-white" />
+                </div>
+                <div>
+                  <div className="font-black text-white">Tichet: Activare Wolt</div>
+                  <div className="text-[11px] text-cyan-100 font-medium">Buletin, selfie, curier nou Wolt</div>
+                </div>
+              </button>
+
+              {/* Button 3: Schimbare Autovehicul */}
               <button
                 type="button"
                 onClick={() => openNewTicketModal("schimbare_vehicul")}
@@ -838,7 +853,7 @@ export default function UnifiedManagerPage() {
                 </div>
               </button>
 
-              {/* Button 3: Schimbare Numar Telefon */}
+              {/* Button 4: Schimbare Numar Telefon */}
               <button
                 type="button"
                 onClick={() => openNewTicketModal("schimbare_telefon")}
@@ -1080,9 +1095,13 @@ export default function UnifiedManagerPage() {
                         <Smartphone className="w-3 h-3 text-sky-700" />
                         <span>Tichet: Schimbare Telefon</span>
                       </span>
+                    ) : app.platforms.includes("wolt") && !app.platforms.includes("glovo") ? (
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-100 text-cyan-900 font-bold border border-cyan-300 flex items-center gap-1">
+                        <span>🆕 Tichet: Activare Wolt</span>
+                      </span>
                     ) : (
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold border border-amber-300 flex items-center gap-1">
-                        <span>🆕 Tichet: Activare Cont</span>
+                        <span>🆕 Tichet: Activare Glovo</span>
                       </span>
                     )}
 
@@ -1564,7 +1583,13 @@ export default function UnifiedManagerPage() {
             {/* Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-900 text-white">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-400 text-amber-950 flex items-center justify-center font-bold">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
+                    formTicketType === "activare_cont" && formPlatforms.includes("wolt")
+                      ? "bg-cyan-500 text-white"
+                      : "bg-amber-400 text-amber-950"
+                  }`}
+                >
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
@@ -1573,7 +1598,9 @@ export default function UnifiedManagerPage() {
                       ? "Creare Tichet: Schimbare Autovehicul"
                       : formTicketType === "schimbare_telefon"
                       ? "Creare Tichet: Schimbare Număr Telefon"
-                      : "Creare Tichet: Activare Cont Curier"}
+                      : formPlatforms.includes("wolt")
+                      ? "Creare Tichet: Activare Cont Wolt"
+                      : "Creare Tichet: Activare Cont Glovo"}
                   </h3>
                   <p className="text-[11px] text-slate-400">
                     {currentUser.role === "admin"
@@ -1599,17 +1626,35 @@ export default function UnifiedManagerPage() {
                 <label className="block text-xs font-bold text-slate-800 mb-2">
                   Selectează tipul tichetului pe care vrei să îl creezi:
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormTicketType("activare_cont")}
+                    onClick={() => {
+                      setFormTicketType("activare_cont");
+                      setFormPlatforms(["glovo"]);
+                    }}
                     className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center justify-center gap-1 transition ${
-                      formTicketType === "activare_cont"
+                      formTicketType === "activare_cont" && formPlatforms.includes("glovo")
                         ? "border-amber-400 bg-amber-50 text-amber-950 shadow-xs ring-2 ring-amber-400/20"
                         : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
                     }`}
                   >
-                    <span>🆕 Activare Cont</span>
+                    <span>🟡 Activare Glovo</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormTicketType("activare_cont");
+                      setFormPlatforms(["wolt"]);
+                    }}
+                    className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center justify-center gap-1 transition ${
+                      formTicketType === "activare_cont" && formPlatforms.includes("wolt")
+                        ? "border-cyan-500 bg-cyan-50 text-cyan-950 shadow-xs ring-2 ring-cyan-400/20"
+                        : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>🔵 Activare Wolt</span>
                   </button>
 
                   <button
@@ -1672,59 +1717,86 @@ export default function UnifiedManagerPage() {
                 </div>
               )}
 
-              {/* 1. Platforme (Glovo / Wolt) */}
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-2">
-                  Platformă vizată (alege una sau ambele)
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <div
-                    onClick={() => togglePlatform("glovo")}
-                    className={`cursor-pointer rounded-2xl p-3.5 border-2 transition-all duration-200 relative ${
-                      formPlatforms.includes("glovo")
-                        ? "border-amber-400 bg-amber-50/50 shadow-xs ring-2 ring-amber-400/20"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="px-2 py-0.5 bg-amber-400 text-amber-950 rounded-md text-xs font-black">
-                        Glovo
-                      </span>
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                          formPlatforms.includes("glovo") ? "bg-amber-500 text-white" : "border border-slate-300"
-                        }`}
-                      >
-                        {formPlatforms.includes("glovo") && "✓"}
-                      </div>
-                    </div>
-                    <p className="font-semibold text-xs text-slate-800">Cont Glovo</p>
-                  </div>
-
-                  <div
-                    onClick={() => togglePlatform("wolt")}
-                    className={`cursor-pointer rounded-2xl p-3.5 border-2 transition-all duration-200 relative ${
-                      formPlatforms.includes("wolt")
-                        ? "border-sky-400 bg-sky-50/50 shadow-xs ring-2 ring-sky-400/20"
-                        : "border-slate-200 hover:border-slate-300 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="px-2 py-0.5 bg-sky-500 text-white rounded-md text-xs font-black">
-                        Wolt
-                      </span>
-                      <div
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                          formPlatforms.includes("wolt") ? "bg-sky-500 text-white" : "border border-slate-300"
-                        }`}
-                      >
-                        {formPlatforms.includes("wolt") && "✓"}
-                      </div>
-                    </div>
-                    <p className="font-semibold text-xs text-slate-800">Cont Wolt</p>
+              {/* 1. Platformă: afișată ca indicator dedicat la Activare Cont, sau selector la Schimbare Vehicul / Telefon */}
+              {formTicketType === "activare_cont" ? (
+                <div
+                  className={`p-3.5 rounded-2xl border-2 flex items-center justify-between ${
+                    formPlatforms.includes("wolt")
+                      ? "border-cyan-400 bg-cyan-50/60 text-cyan-950"
+                      : "border-amber-400 bg-amber-50/60 text-amber-950"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={`px-3 py-1 rounded-lg text-xs font-black ${
+                        formPlatforms.includes("wolt")
+                          ? "bg-cyan-500 text-white"
+                          : "bg-amber-400 text-amber-950"
+                      }`}
+                    >
+                      {formPlatforms.includes("wolt") ? "WOLT" : "GLOVO"}
+                    </span>
+                    <span className="text-xs font-bold">
+                      {formPlatforms.includes("wolt")
+                        ? "Tichet dedicat pentru Activare Cont Wolt"
+                        : "Tichet dedicat pentru Activare Cont Glovo"}
+                    </span>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-slate-800 mb-2">
+                    Platformă vizată (alege Glovo sau Wolt)
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div
+                      onClick={() => togglePlatform("glovo")}
+                      className={`cursor-pointer rounded-2xl p-3.5 border-2 transition-all duration-200 relative ${
+                        formPlatforms.includes("glovo")
+                          ? "border-amber-400 bg-amber-50/50 shadow-xs ring-2 ring-amber-400/20"
+                          : "border-slate-200 hover:border-slate-300 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="px-2 py-0.5 bg-amber-400 text-amber-950 rounded-md text-xs font-black">
+                          Glovo
+                        </span>
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                            formPlatforms.includes("glovo") ? "bg-amber-500 text-white" : "border border-slate-300"
+                          }`}
+                        >
+                          {formPlatforms.includes("glovo") && "✓"}
+                        </div>
+                      </div>
+                      <p className="font-semibold text-xs text-slate-800">Cont Glovo</p>
+                    </div>
+
+                    <div
+                      onClick={() => togglePlatform("wolt")}
+                      className={`cursor-pointer rounded-2xl p-3.5 border-2 transition-all duration-200 relative ${
+                        formPlatforms.includes("wolt")
+                          ? "border-sky-400 bg-sky-50/50 shadow-xs ring-2 ring-sky-400/20"
+                          : "border-slate-200 hover:border-slate-300 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="px-2 py-0.5 bg-sky-500 text-white rounded-md text-xs font-black">
+                          Wolt
+                        </span>
+                        <div
+                          className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                            formPlatforms.includes("wolt") ? "bg-sky-500 text-white" : "border border-slate-300"
+                          }`}
+                        >
+                          {formPlatforms.includes("wolt") && "✓"}
+                        </div>
+                      </div>
+                      <p className="font-semibold text-xs text-slate-800">Cont Wolt</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* CAMPURI SPECIFICE PER TIP TICHET */}
 
