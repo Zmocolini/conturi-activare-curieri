@@ -356,6 +356,10 @@ export default function UnifiedManagerPage() {
         return;
       }
     } else if (formTicketType === "schimbare_vehicul") {
+      if (!formCourierUid.trim()) {
+        setSubmitError("UID COURIER este obligatoriu pentru schimbarea de autovehicul.");
+        return;
+      }
       if (!formPhone.trim()) {
         setSubmitError("Numărul de telefon al curierului este obligatoriu.");
         return;
@@ -375,6 +379,10 @@ export default function UnifiedManagerPage() {
         return;
       }
     } else if (formTicketType === "schimbare_telefon") {
+      if (!formCourierUid.trim()) {
+        setSubmitError("UID COURIER este obligatoriu pentru schimbarea numărului de telefon.");
+        return;
+      }
       if (!formPhone.trim()) {
         setSubmitError("Numărul actual de telefon este obligatoriu.");
         return;
@@ -1917,10 +1925,11 @@ export default function UnifiedManagerPage() {
 
                     <div>
                       <label className="block text-[11px] font-bold text-purple-900 mb-1">
-                        UID COURIER (ID Curier)
+                        UID COURIER (ID Curier) *
                       </label>
                       <input
                         type="text"
+                        required
                         placeholder="ex: 12345678 / UID curier"
                         value={formCourierUid}
                         onChange={(e) => setFormCourierUid(e.target.value)}
@@ -2045,10 +2054,11 @@ export default function UnifiedManagerPage() {
 
                     <div>
                       <label className="block text-[11px] font-bold text-sky-900 mb-1">
-                        UID COURIER (ID Curier)
+                        UID COURIER (ID Curier) *
                       </label>
                       <input
                         type="text"
+                        required
                         placeholder="ex: 12345678 / UID curier"
                         value={formCourierUid}
                         onChange={(e) => setFormCourierUid(e.target.value)}

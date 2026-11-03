@@ -81,6 +81,12 @@ export async function POST(req: Request) {
         );
       }
     } else if (ticketType === "schimbare_vehicul") {
+      if (!body.courierUid || !body.courierUid.trim()) {
+        return NextResponse.json(
+          { success: false, message: "UID COURIER este obligatoriu pentru schimbarea de autovehicul." },
+          { status: 400 }
+        );
+      }
       if (!body.phone || !body.oldVehicleType || !body.vehicleType) {
         return NextResponse.json(
           { success: false, message: "Completează numărul de telefon, vehiculul actual și vehiculul nou." },
@@ -88,6 +94,12 @@ export async function POST(req: Request) {
         );
       }
     } else if (ticketType === "schimbare_telefon") {
+      if (!body.courierUid || !body.courierUid.trim()) {
+        return NextResponse.json(
+          { success: false, message: "UID COURIER este obligatoriu pentru schimbarea numărului de telefon." },
+          { status: 400 }
+        );
+      }
       if (!body.phone || !body.newPhone || !body.newPhone.trim()) {
         return NextResponse.json(
           { success: false, message: "Completează numărul vechi de telefon și noul număr de telefon." },
