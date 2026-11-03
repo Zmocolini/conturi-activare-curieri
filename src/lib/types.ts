@@ -11,6 +11,7 @@ export interface Application {
   recruiter: string; // "glovowolt" (Husein) or "ionutvarga" (Ionut Varga)
   ticketType: TicketType; // "activare_cont" | "schimbare_vehicul" | "schimbare_telefon"
   fullName: string;
+  courierUid?: string; // UID Courier for Schimbare Telefon & Schimbare Vehicul
   phone: string;
   newPhone?: string; // used when ticketType === "schimbare_telefon"
   email?: string;
@@ -31,6 +32,7 @@ export interface ApplicationSubmission {
   recruiter?: string;
   ticketType?: TicketType;
   fullName: string;
+  courierUid?: string; // UID Courier for Schimbare Telefon & Schimbare Vehicul
   phone: string;
   newPhone?: string;
   email?: string;

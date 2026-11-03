@@ -118,6 +118,7 @@ export async function POST(req: Request) {
       recruiter: assignedRecruiter,
       ticketType,
       fullName: body.fullName.trim(),
+      courierUid: body.courierUid?.trim() || undefined,
       phone: body.phone.trim(),
       newPhone: body.newPhone?.trim(),
       email: body.email?.trim() || "",

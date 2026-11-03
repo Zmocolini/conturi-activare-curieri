@@ -83,6 +83,7 @@ export default function UnifiedManagerPage() {
   const [formTicketType, setFormTicketType] = useState<TicketType>("activare_cont");
   const [formTargetRecruiter, setFormTargetRecruiter] = useState<"glovowolt" | "ionutvarga">("glovowolt");
   const [formFullName, setFormFullName] = useState("");
+  const [formCourierUid, setFormCourierUid] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formNewPhone, setFormNewPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -229,6 +230,7 @@ export default function UnifiedManagerPage() {
       setFormPlatforms(["glovo"]);
     }
     setFormFullName("");
+    setFormCourierUid("");
     setFormPhone("");
     setFormNewPhone("");
     setFormEmail("");
@@ -407,6 +409,7 @@ export default function UnifiedManagerPage() {
           recruiter: currentUser?.role === "admin" ? formTargetRecruiter : undefined,
           ticketType: formTicketType,
           fullName: formFullName,
+          courierUid: formCourierUid,
           phone: formPhone,
           newPhone: formNewPhone,
           email: formEmail,
@@ -448,6 +451,7 @@ export default function UnifiedManagerPage() {
 
       // Reset form
       setFormFullName("");
+      setFormCourierUid("");
       setFormPhone("");
       setFormNewPhone("");
       setFormEmail("");
@@ -567,6 +571,7 @@ export default function UnifiedManagerPage() {
       "Manager",
       "Tip Tichet",
       "Nume Curier",
+      "UID Courier",
       "Telefon",
       "Telefon Nou",
       "Email",
@@ -589,6 +594,7 @@ export default function UnifiedManagerPage() {
           : "Activare Cont Curier"
       }"`,
       `"${app.fullName.replace(/"/g, '""')}"`,
+      `"${(app.courierUid || "").replace(/"/g, '""')}"`,
       `"${app.phone}"`,
       `"${app.newPhone || ""}"`,
       `"${app.email || ""}"`,
@@ -623,6 +629,7 @@ export default function UnifiedManagerPage() {
 
       const matchesSearch =
         app.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (app.courierUid && app.courierUid.toLowerCase().includes(searchQuery.toLowerCase())) ||
         app.phone.includes(searchQuery) ||
         (app.newPhone && app.newPhone.includes(searchQuery)) ||
         (app.email && app.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -1164,7 +1171,12 @@ export default function UnifiedManagerPage() {
                           {app.vehicleType}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-slate-600 pt-0.5">
+                      <div className="flex items-center gap-3 flex-wrap text-slate-600 pt-0.5">
+                        {app.courierUid && (
+                          <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-950 font-bold border border-purple-300">
+                            🆔 UID Courier: {app.courierUid}
+                          </span>
+                        )}
                         <span>📞 Tel curier: <strong>{app.phone}</strong></span>
                         {app.email && <span>✉️ {app.email}</span>}
                       </div>
@@ -1184,9 +1196,16 @@ export default function UnifiedManagerPage() {
                           {app.newPhone || "Număr Nou"}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-slate-600 pt-0.5">
-                        {app.email && <span>✉️ {app.email}</span>}
-                      </div>
+                      {(app.courierUid || app.email) && (
+                        <div className="flex items-center gap-3 flex-wrap text-slate-600 pt-0.5">
+                          {app.courierUid && (
+                            <span className="px-2 py-0.5 rounded-md bg-sky-100 text-sky-950 font-bold border border-sky-300">
+                              🆔 UID Courier: {app.courierUid}
+                            </span>
+                          )}
+                          {app.email && <span>✉️ {app.email}</span>}
+                        </div>
+                      )}
                     </div>
                   ) : null}
 
@@ -1881,18 +1900,33 @@ export default function UnifiedManagerPage() {
                     </span>
                   </h4>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Nume și Prenume Curier *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="ex: Popescu Ion"
-                      value={formFullName}
-                      onChange={(e) => setFormFullName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 font-medium"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Nume și Prenume Curier *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="ex: Popescu Ion"
+                        value={formFullName}
+                        onChange={(e) => setFormFullName(e.target.value)}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-purple-900 mb-1">
+                        UID COURIER (ID Curier)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: 12345678 / UID curier"
+                        value={formCourierUid}
+                        onChange={(e) => setFormCourierUid(e.target.value)}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-purple-300 bg-white text-slate-900 font-bold"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -1994,18 +2028,33 @@ export default function UnifiedManagerPage() {
                     <span>Detalii Schimbare Număr Telefon</span>
                   </h4>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                      Nume și Prenume Curier *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="ex: Popescu Ion"
-                      value={formFullName}
-                      onChange={(e) => setFormFullName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 font-medium"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Nume și Prenume Curier *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="ex: Popescu Ion"
+                        value={formFullName}
+                        onChange={(e) => setFormFullName(e.target.value)}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 bg-white text-slate-900 font-medium"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-sky-900 mb-1">
+                        UID COURIER (ID Curier)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="ex: 12345678 / UID curier"
+                        value={formCourierUid}
+                        onChange={(e) => setFormCourierUid(e.target.value)}
+                        className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-sky-300 bg-white text-slate-900 font-bold"
+                      />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

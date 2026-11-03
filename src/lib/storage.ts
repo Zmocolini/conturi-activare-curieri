@@ -43,6 +43,7 @@ async function ensureDbTable(client: Client): Promise<void> {
         recruiter TEXT NOT NULL,
         ticket_type TEXT NOT NULL,
         full_name TEXT NOT NULL,
+        courier_uid TEXT,
         phone TEXT NOT NULL,
         new_phone TEXT,
         email TEXT,
@@ -59,6 +60,11 @@ async function ensureDbTable(client: Client): Promise<void> {
         updated_at TEXT
       )
     `);
+    try {
+      await client.execute(`ALTER TABLE applications ADD COLUMN courier_uid TEXT`);
+    } catch {
+      // Column already exists
+    }
     dbInitialized = true;
   } catch (err) {
     console.error("Failed to ensure applications table in Turso:", err);
@@ -77,6 +83,7 @@ function rowToApplication(row: any): Application {
     recruiter: String(row.recruiter || "glovowolt"),
     ticketType: (row.ticket_type || "activare_cont") as TicketType,
     fullName: String(row.full_name || ""),
+    courierUid: row.courier_uid ? String(row.courier_uid) : undefined,
     phone: String(row.phone || ""),
     newPhone: row.new_phone ? String(row.new_phone) : undefined,
     email: row.email ? String(row.email) : undefined,
@@ -166,16 +173,17 @@ export async function saveApplication(app: Application): Promise<void> {
       await client.execute({
         sql: `
           INSERT INTO applications (
-            id, recruiter, ticket_type, full_name, phone, new_phone, email, city,
+            id, recruiter, ticket_type, full_name, courier_uid, phone, new_phone, email, city,
             platforms, vehicle_type, old_vehicle_type, id_card_photo_url, selfie_photo_url,
             status, rejection_reason, notes, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `,
         args: [
           normalizedApp.id,
           normalizedApp.recruiter,
           normalizedApp.ticketType,
           normalizedApp.fullName,
+          normalizedApp.courierUid || null,
           normalizedApp.phone,
           normalizedApp.newPhone || null,
           normalizedApp.email || null,
