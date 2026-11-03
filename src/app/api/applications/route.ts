@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       }
       if (!body.idCardPhoto) {
         return NextResponse.json(
-          { success: false, message: "Poza sau fișierul PDF de buletin este obligatoriu." },
+          { success: false, message: "Poza cu fața buletinului (ID / TRC) este obligatorie." },
           { status: 400 }
         );
       }
@@ -94,6 +94,16 @@ export async function POST(req: Request) {
           { status: 400 }
         );
       }
+    }
+
+    if (
+      body.idCardPhoto?.startsWith("data:application/pdf") ||
+      body.selfiePhoto?.startsWith("data:application/pdf")
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Fișierele PDF nu mai sunt acceptate. Te rugăm să încarci doar poze (JPG / PNG)." },
+        { status: 400 }
+      );
     }
 
     // Assigned strictly to the recruiter, or chosen recruiter if admin

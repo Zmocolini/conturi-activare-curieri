@@ -14,26 +14,21 @@ interface ImageUploadFieldProps {
   badge?: string;
 }
 
-// Process file: keep original untouched if <= 2.5MB, otherwise gently resize preserving exact aspect ratio
+// Process file: reject PDF, keep original untouched if <= 2.5MB, otherwise gently resize preserving exact aspect ratio
 async function processFile(file: File): Promise<string> {
   const isPdf =
     file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 
-  // If PDF, check size and read as data URL
   if (isPdf) {
-    const maxPdfBytes = 3.8 * 1024 * 1024;
-    if (file.size > maxPdfBytes) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
-      throw new Error(
-        `Fișierul PDF este prea mare (${sizeMb} MB). Limita maximă pentru PDF este de 3.8 MB. Te rugăm să folosești un PDF mai mic sau o poză a documentului.`
-      );
-    }
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Eroare la citirea fișierului PDF."));
-      reader.readAsDataURL(file);
-    });
+    throw new Error(
+      "Fișierele PDF nu mai sunt acceptate! Te rugăm să încarci doar o poză (JPG, PNG, WEBP)."
+    );
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error(
+      "Format neacceptat. Te rugăm să încarci doar o imagine (JPG, PNG, WEBP)."
+    );
   }
 
   // If image is already <= 2.5 MB, keep 100% original file untouched (no canvas, no quality loss, no format change!)
@@ -160,12 +155,12 @@ export default function ImageUploadField({
 
       <p className="text-xs text-slate-500">{description}</p>
 
-      {/* Hidden file input supporting images AND PDF */}
+      {/* Hidden file input supporting ONLY images (no PDF) */}
       <input
         ref={fileInputRef}
         id={id}
         type="file"
-        accept="image/*,application/pdf,.pdf"
+        accept="image/jpeg,image/png,image/webp,image/*"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -180,7 +175,7 @@ export default function ImageUploadField({
           {isProcessing ? (
             <div className="flex flex-col items-center py-4">
               <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mb-2" />
-              <span className="text-sm font-medium text-slate-600">Se optimizează fișierul...</span>
+              <span className="text-sm font-medium text-slate-600">Se încarcă poza...</span>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
@@ -189,9 +184,9 @@ export default function ImageUploadField({
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-700 group-hover:text-amber-600 transition-colors">
-                  Apasă pentru a alege fișierul (Poză sau PDF)
+                  Apasă pentru a alege poza (JPG, PNG)
                 </p>
-                <p className="text-xs text-slate-400 mt-1">Acceptă PDF (max 2.5MB) sau Poze JPG, PNG (optimizate automat)</p>
+                <p className="text-xs text-slate-400 mt-1">Acceptă doar poze JPG, PNG, WEBP (fără PDF)</p>
               </div>
               {exampleHint && (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-xs mt-1">

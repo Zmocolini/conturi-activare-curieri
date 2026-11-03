@@ -346,7 +346,7 @@ export default function UnifiedManagerPage() {
         return;
       }
       if (!formIdCardPhoto) {
-        setSubmitError("Încarcă poza sau fișierul PDF al buletinului.");
+        setSubmitError("Încarcă poza cu fața buletinului (ID / TRC).");
         return;
       }
       if (!formSelfiePhoto) {
@@ -1539,7 +1539,7 @@ export default function UnifiedManagerPage() {
               <p className="text-xs text-slate-600">
                 {photoUpdateModal.ticketType === "schimbare_vehicul"
                   ? "Pentru Glovo: încarcă poza cu curierul lângă mașină (cu numărul de înmatriculare vizibil) sau cu curierul pe bicicletă / scuter."
-                  : "Atașează poza sau PDF-ul buletinului și selfie-ul cu buletinul în mână."}
+                  : "Atașează poza cu fața buletinului (ID / TRC) și poza selfie cu buletinul în mână (doar poze, fără PDF)."}
               </p>
 
               <div className="space-y-3">
@@ -1548,12 +1548,12 @@ export default function UnifiedManagerPage() {
                   label={
                     photoUpdateModal.ticketType === "schimbare_vehicul"
                       ? "Poză Curier lângă Mașină (nr. înmatriculare vizibil) / pe Bicicletă / Scuter"
-                      : "Poză Buletin (Carte de Identitate sau PDF)"
+                      : "Poză ID / TRC (Doar fața buletinului)"
                   }
                   description={
                     photoUpdateModal.ticketType === "schimbare_vehicul"
                       ? "Poză clară cu curierul și vehiculul nou"
-                      : "Poză sau fișier PDF cu actul de identitate"
+                      : "Fotografie clară doar cu fața buletinului (ID / TRC)"
                   }
                   value={photoUpdateModal.idCardPhoto}
                   onChange={(val) =>
@@ -1564,8 +1564,8 @@ export default function UnifiedManagerPage() {
                 {photoUpdateModal.ticketType !== "schimbare_vehicul" && (
                   <ImageUploadField
                     id="update_modal_doc2"
-                    label="Selfie cu buletinul în mână"
-                    description="Selfie clar al curierului ținând buletinul în mână lângă față"
+                    label="Poză Selfie cu buletinul în mână"
+                    description="Selfie clar al curierului ținând buletinul (ID / TRC) în mână lângă față"
                     value={photoUpdateModal.selfiePhoto}
                     onChange={(val) =>
                       setPhotoUpdateModal((prev) => (prev ? { ...prev, selfiePhoto: val } : null))
@@ -2154,16 +2154,16 @@ export default function UnifiedManagerPage() {
                     </div>
                   </div>
 
-                  {/* Documente (Buletin & Selfie) */}
+                  {/* Documente (Buletin & Selfie - Doar Poze) */}
                   <div className="space-y-4 pt-1">
                     <label className="block text-xs font-bold text-slate-800">
-                      Fotografii Documente (Imagine sau PDF)
+                      Fotografii Documente (Doar Poze — fără PDF)
                     </label>
 
                     <ImageUploadField
                       id="modal_buletin"
-                      label="Poză Buletin (Carte de Identitate sau PDF)"
-                      description="Fotografie clară sau fișier PDF al buletinului curierului."
+                      label="Poză ID / TRC (Doar fața buletinului)"
+                      description="Fotografie clară doar cu fața buletinului (ID) sau a permisului de ședere (TRC). Nu se acceptă fișiere PDF."
                       value={formIdCardPhoto}
                       onChange={setFormIdCardPhoto}
                       required
@@ -2172,8 +2172,8 @@ export default function UnifiedManagerPage() {
 
                     <ImageUploadField
                       id="modal_selfie"
-                      label="Selfie cu buletinul în mână"
-                      description="Selfie clar al curierului ținând buletinul în mână lângă față."
+                      label="Poză Selfie cu buletinul în mână"
+                      description="Selfie clar al curierului ținând buletinul (ID / TRC) în mână lângă față."
                       value={formSelfiePhoto}
                       onChange={setFormSelfiePhoto}
                       required
