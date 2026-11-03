@@ -363,7 +363,13 @@ export default function UnifiedManagerPage() {
         return;
       }
       if (formPlatforms.includes("glovo") && !formIdCardPhoto) {
-        setSubmitError("Pentru Glovo este obligatoriu să încarci actele vehiculului (talon / asigurare sau buletin).");
+        const vehMsg =
+          formVehicleType === "masina"
+            ? "Pentru Glovo este obligatorie poza cu curierul lângă mașină (să se vadă numărul de înmatriculare)."
+            : formVehicleType === "scuter"
+            ? "Pentru Glovo este obligatorie poza cu curierul pe scuter."
+            : "Pentru Glovo este obligatorie poza cu curierul pe bicicletă.";
+        setSubmitError(vehMsg);
         return;
       }
     } else if (formTicketType === "schimbare_telefon") {
@@ -806,20 +812,20 @@ export default function UnifiedManagerPage() {
               </div>
             </div>
 
-            {/* 4 Prominent Ticket Creation Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-4">
+            {/* 5 Prominent Ticket Creation Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-4">
               {/* Button 1: Activare Cont Glovo */}
               <button
                 type="button"
                 onClick={() => openNewTicketModal("activare_cont", "glovo")}
-                className="p-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs sm:text-sm transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
+                className="p-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-500/30 flex items-center justify-center shrink-0">
-                  <Plus className="w-6 h-6 stroke-[3]" />
+                <div className="w-9 h-9 rounded-xl bg-amber-500/30 flex items-center justify-center shrink-0">
+                  <Plus className="w-5 h-5 stroke-[3]" />
                 </div>
                 <div>
                   <div className="font-black text-amber-950">Tichet: Activare Glovo</div>
-                  <div className="text-[11px] text-amber-900/80 font-medium">Buletin, selfie, curier nou Glovo</div>
+                  <div className="text-[11px] text-amber-900/80 font-medium">Buletin, selfie, curier Glovo</div>
                 </div>
               </button>
 
@@ -827,44 +833,59 @@ export default function UnifiedManagerPage() {
               <button
                 type="button"
                 onClick={() => openNewTicketModal("activare_cont", "wolt")}
-                className="p-4 rounded-2xl bg-cyan-500 hover:bg-cyan-600 text-white font-black text-xs sm:text-sm transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
+                className="p-3.5 rounded-2xl bg-cyan-500 hover:bg-cyan-600 text-white font-black text-xs transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Plus className="w-6 h-6 stroke-[3] text-white" />
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Plus className="w-5 h-5 stroke-[3] text-white" />
                 </div>
                 <div>
                   <div className="font-black text-white">Tichet: Activare Wolt</div>
-                  <div className="text-[11px] text-cyan-100 font-medium">Buletin, selfie, curier nou Wolt</div>
+                  <div className="text-[11px] text-cyan-100 font-medium">Buletin, selfie, curier Wolt</div>
                 </div>
               </button>
 
-              {/* Button 3: Schimbare Autovehicul */}
+              {/* Button 3: Schimbare Autovehicul Glovo */}
               <button
                 type="button"
-                onClick={() => openNewTicketModal("schimbare_vehicul")}
-                className="p-4 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs sm:text-sm transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
+                onClick={() => openNewTicketModal("schimbare_vehicul", "glovo")}
+                className="p-3.5 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-black text-xs transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Car className="w-6 h-6 text-white" />
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Car className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <div className="font-black text-white">Tichet: Schimbare Vehicul</div>
-                  <div className="text-[11px] text-purple-200 font-medium">Trecere la mașină / scuter / bicicletă</div>
+                  <div className="font-black text-white">Schimbare Vehicul Glovo</div>
+                  <div className="text-[11px] text-purple-200 font-medium">Cu poză curier &amp; vehicul</div>
                 </div>
               </button>
 
-              {/* Button 4: Schimbare Numar Telefon */}
+              {/* Button 4: Schimbare Autovehicul Wolt */}
+              <button
+                type="button"
+                onClick={() => openNewTicketModal("schimbare_vehicul", "wolt")}
+                className="p-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Car className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <div className="font-black text-white">Schimbare Vehicul Wolt</div>
+                  <div className="text-[11px] text-indigo-200 font-medium">Fără poze necesare</div>
+                </div>
+              </button>
+
+              {/* Button 5: Schimbare Numar Telefon */}
               <button
                 type="button"
                 onClick={() => openNewTicketModal("schimbare_telefon")}
-                className="p-4 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-black text-xs sm:text-sm transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
+                className="p-3.5 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-black text-xs transition shadow-sm hover:shadow-md flex items-center gap-3 text-left active:scale-[0.98]"
               >
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Smartphone className="w-6 h-6 text-white" />
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Smartphone className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <div className="font-black text-white">Tichet: Schimbare Telefon</div>
-                  <div className="text-[11px] text-sky-200 font-medium">Actualizare număr telefon curier</div>
+                  <div className="text-[11px] text-sky-200 font-medium">Actualizare număr telefon</div>
                 </div>
               </button>
             </div>
@@ -1086,10 +1107,17 @@ export default function UnifiedManagerPage() {
 
                     {/* Ticket Type Tag */}
                     {app.ticketType === "schimbare_vehicul" ? (
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1">
-                        <Car className="w-3 h-3 text-purple-700" />
-                        <span>Tichet: Schimbare Autovehicul</span>
-                      </span>
+                      app.platforms.includes("wolt") && !app.platforms.includes("glovo") ? (
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-900 font-bold border border-indigo-300 flex items-center gap-1">
+                          <Car className="w-3 h-3 text-indigo-700" />
+                          <span>Tichet: Schimbare Vehicul Wolt</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 font-bold border border-purple-300 flex items-center gap-1">
+                          <Car className="w-3 h-3 text-purple-700" />
+                          <span>Tichet: Schimbare Vehicul Glovo</span>
+                        </span>
+                      )
                     ) : app.ticketType === "schimbare_telefon" ? (
                       <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-900 font-bold border border-sky-300 flex items-center gap-1">
                         <Smartphone className="w-3 h-3 text-sky-700" />
@@ -1237,17 +1265,17 @@ export default function UnifiedManagerPage() {
                   )}
                 </div>
 
-                {/* Column 2: Documents (Buletin, Talon & Poze Vehicul) */}
+                {/* Column 2: Documents (Buletin & Poze Vehicul) */}
                 <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
                   <div className="flex items-center gap-3">
-                    {/* Poza Buletin / Talon dacă a fost încărcată */}
+                    {/* Poza Buletin / Poză Vehicul dacă a fost încărcată */}
                     {app.idCardPhotoUrl ? (
                       <div className="text-center">
                         <div
                           onClick={() =>
                             setPreviewImage({
                               url: app.idCardPhotoUrl!,
-                              title: `${app.ticketType === "schimbare_vehicul" ? "Acte / Talon Vehicul" : "Buletin"} - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
+                              title: `${app.ticketType === "schimbare_vehicul" ? "Poză Curier & Vehicul" : "Buletin"} - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
                             })
                           }
                           className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
@@ -1270,7 +1298,7 @@ export default function UnifiedManagerPage() {
                           </div>
                         </div>
                         <span className="text-[11px] font-semibold text-slate-500 block mt-1">
-                          {app.ticketType === "schimbare_vehicul" ? "Acte / Talon" : "Poza Buletin"}
+                          {app.ticketType === "schimbare_vehicul" ? "Poză Vehicul" : "Poza Buletin"}
                         </span>
                       </div>
                     ) : null}
@@ -1305,38 +1333,41 @@ export default function UnifiedManagerPage() {
                           </div>
                         </div>
                         <span className="text-[11px] font-semibold text-slate-500 block mt-1">
-                          {app.ticketType === "schimbare_vehicul" ? "Poză Vehicul" : "Selfie Buletin"}
+                          {app.ticketType === "schimbare_vehicul" ? "Poză Suplimentară" : "Selfie Buletin"}
                         </span>
                       </div>
                     ) : null}
                   </div>
 
-                  {/* Buton Încarcă / Actualizează Poze (pentru schimbare vehicul sau completare documente) */}
-                  <div className="flex flex-col items-center justify-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPhotoUpdateError("");
-                        setPhotoUpdateModal({
-                          open: true,
-                          appId: app.id,
-                          courierName: app.fullName,
-                          ticketType: app.ticketType,
-                          idCardPhoto: "",
-                          selfiePhoto: "",
-                        });
-                      }}
-                      className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl border transition flex items-center gap-1 active:scale-95 ${
-                        app.ticketType === "schimbare_vehicul"
-                          ? "bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200"
-                          : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
-                      }`}
-                      title="Încarcă sau actualizează pozele documentelor"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>{app.idCardPhotoUrl || app.selfiePhotoUrl ? "Modifică Poze" : "Adaugă Poze"}</span>
-                    </button>
-                  </div>
+                  {/* Buton Încarcă / Actualizează Poze (ascuns la Wolt schimbare vehicul și la schimbare telefon) */}
+                  {app.ticketType !== "schimbare_telefon" &&
+                    !(app.ticketType === "schimbare_vehicul" && app.platforms.includes("wolt") && !app.platforms.includes("glovo")) && (
+                      <div className="flex flex-col items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPhotoUpdateError("");
+                            setPhotoUpdateModal({
+                              open: true,
+                              appId: app.id,
+                              courierName: app.fullName,
+                              ticketType: app.ticketType,
+                              idCardPhoto: "",
+                              selfiePhoto: "",
+                            });
+                          }}
+                          className={`text-[11px] font-bold px-2.5 py-1.5 rounded-xl border transition flex items-center gap-1 active:scale-95 ${
+                            app.ticketType === "schimbare_vehicul"
+                              ? "bg-purple-50 hover:bg-purple-100 text-purple-900 border-purple-200"
+                              : "bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                          }`}
+                          title="Încarcă sau actualizează pozele"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{app.idCardPhotoUrl || app.selfiePhotoUrl ? "Modifică Poze" : "Adaugă Poze"}</span>
+                        </button>
+                      </div>
+                    )}
                 </div>
 
                 {/* Column 3: Actions & Synchronized Status */}
@@ -1506,29 +1537,41 @@ export default function UnifiedManagerPage() {
 
             <form onSubmit={handleSaveUpdatedPhotos} className="mt-4 space-y-4">
               <p className="text-xs text-slate-600">
-                Atașează documentele necesare (pentru Glovo: talonul sau asigurarea noului vehicul, buletin sau poză vehicul). Se acceptă fișiere JPG, PNG sau PDF.
+                {photoUpdateModal.ticketType === "schimbare_vehicul"
+                  ? "Pentru Glovo: încarcă poza cu curierul lângă mașină (cu numărul de înmatriculare vizibil) sau cu curierul pe bicicletă / scuter."
+                  : "Atașează poza sau PDF-ul buletinului și selfie-ul cu buletinul în mână."}
               </p>
 
               <div className="space-y-3">
                 <ImageUploadField
                   id="update_modal_doc1"
-                  label="Document 1 / Talon / Acte Vehicul / Buletin"
-                  description="Poză sau fișier PDF cu talonul sau actul de identitate"
+                  label={
+                    photoUpdateModal.ticketType === "schimbare_vehicul"
+                      ? "Poză Curier lângă Mașină (nr. înmatriculare vizibil) / pe Bicicletă / Scuter"
+                      : "Poză Buletin (Carte de Identitate sau PDF)"
+                  }
+                  description={
+                    photoUpdateModal.ticketType === "schimbare_vehicul"
+                      ? "Poză clară cu curierul și vehiculul nou"
+                      : "Poză sau fișier PDF cu actul de identitate"
+                  }
                   value={photoUpdateModal.idCardPhoto}
                   onChange={(val) =>
                     setPhotoUpdateModal((prev) => (prev ? { ...prev, idCardPhoto: val } : null))
                   }
                 />
 
-                <ImageUploadField
-                  id="update_modal_doc2"
-                  label="Document 2 / Poză Noul Vehicul / Selfie"
-                  description="Poză cu vehiculul sau selfie curier"
-                  value={photoUpdateModal.selfiePhoto}
-                  onChange={(val) =>
-                    setPhotoUpdateModal((prev) => (prev ? { ...prev, selfiePhoto: val } : null))
-                  }
-                />
+                {photoUpdateModal.ticketType !== "schimbare_vehicul" && (
+                  <ImageUploadField
+                    id="update_modal_doc2"
+                    label="Selfie cu buletinul în mână"
+                    description="Selfie clar al curierului ținând buletinul în mână lângă față"
+                    value={photoUpdateModal.selfiePhoto}
+                    onChange={(val) =>
+                      setPhotoUpdateModal((prev) => (prev ? { ...prev, selfiePhoto: val } : null))
+                    }
+                  />
+                )}
               </div>
 
               {photoUpdateError && (
@@ -1585,7 +1628,7 @@ export default function UnifiedManagerPage() {
               <div className="flex items-center gap-2.5">
                 <div
                   className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
-                    formTicketType === "activare_cont" && formPlatforms.includes("wolt")
+                    formPlatforms.includes("wolt") && formTicketType !== "schimbare_telefon"
                       ? "bg-cyan-500 text-white"
                       : "bg-amber-400 text-amber-950"
                   }`}
@@ -1595,7 +1638,9 @@ export default function UnifiedManagerPage() {
                 <div>
                   <h3 className="font-bold text-sm">
                     {formTicketType === "schimbare_vehicul"
-                      ? "Creare Tichet: Schimbare Autovehicul"
+                      ? formPlatforms.includes("wolt")
+                        ? "Creare Tichet: Schimbare Vehicul Wolt"
+                        : "Creare Tichet: Schimbare Vehicul Glovo"
                       : formTicketType === "schimbare_telefon"
                       ? "Creare Tichet: Schimbare Număr Telefon"
                       : formPlatforms.includes("wolt")
@@ -1626,14 +1671,14 @@ export default function UnifiedManagerPage() {
                 <label className="block text-xs font-bold text-slate-800 mb-2">
                   Selectează tipul tichetului pe care vrei să îl creezi:
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setFormTicketType("activare_cont");
                       setFormPlatforms(["glovo"]);
                     }}
-                    className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center justify-center gap-1 transition ${
+                    className={`p-2.5 rounded-xl border-2 font-bold text-[11px] flex flex-col items-center justify-center gap-1 transition ${
                       formTicketType === "activare_cont" && formPlatforms.includes("glovo")
                         ? "border-amber-400 bg-amber-50 text-amber-950 shadow-xs ring-2 ring-amber-400/20"
                         : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
@@ -1648,7 +1693,7 @@ export default function UnifiedManagerPage() {
                       setFormTicketType("activare_cont");
                       setFormPlatforms(["wolt"]);
                     }}
-                    className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center justify-center gap-1 transition ${
+                    className={`p-2.5 rounded-xl border-2 font-bold text-[11px] flex flex-col items-center justify-center gap-1 transition ${
                       formTicketType === "activare_cont" && formPlatforms.includes("wolt")
                         ? "border-cyan-500 bg-cyan-50 text-cyan-950 shadow-xs ring-2 ring-cyan-400/20"
                         : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
@@ -1659,20 +1704,40 @@ export default function UnifiedManagerPage() {
 
                   <button
                     type="button"
-                    onClick={() => setFormTicketType("schimbare_vehicul")}
-                    className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center justify-center gap-1 transition ${
-                      formTicketType === "schimbare_vehicul"
+                    onClick={() => {
+                      setFormTicketType("schimbare_vehicul");
+                      setFormPlatforms(["glovo"]);
+                    }}
+                    className={`p-2.5 rounded-xl border-2 font-bold text-[11px] flex flex-col items-center justify-center gap-1 transition ${
+                      formTicketType === "schimbare_vehicul" && formPlatforms.includes("glovo")
                         ? "border-purple-500 bg-purple-50 text-purple-950 shadow-xs ring-2 ring-purple-500/20"
                         : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
                     }`}
                   >
-                    <span>🚗 Schimbare Vehicul</span>
+                    <span>🚗 Vehicul Glovo</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormTicketType("schimbare_vehicul");
+                      setFormPlatforms(["wolt"]);
+                      setFormIdCardPhoto("");
+                      setFormSelfiePhoto("");
+                    }}
+                    className={`p-2.5 rounded-xl border-2 font-bold text-[11px] flex flex-col items-center justify-center gap-1 transition ${
+                      formTicketType === "schimbare_vehicul" && formPlatforms.includes("wolt")
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-950 shadow-xs ring-2 ring-indigo-500/20"
+                        : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>🚗 Vehicul Wolt</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setFormTicketType("schimbare_telefon")}
-                    className={`p-3 rounded-xl border-2 font-bold text-xs flex flex-col items-center justify-center gap-1 transition ${
+                    className={`p-2.5 rounded-xl border-2 font-bold text-[11px] flex flex-col items-center justify-center gap-1 transition ${
                       formTicketType === "schimbare_telefon"
                         ? "border-sky-500 bg-sky-50 text-sky-950 shadow-xs ring-2 ring-sky-500/20"
                         : "border-slate-200 text-slate-600 bg-white hover:bg-slate-50"
@@ -1717,8 +1782,8 @@ export default function UnifiedManagerPage() {
                 </div>
               )}
 
-              {/* 1. Platformă: afișată ca indicator dedicat la Activare Cont, sau selector la Schimbare Vehicul / Telefon */}
-              {formTicketType === "activare_cont" ? (
+              {/* 1. Platformă: indicator dedicat la Activare Cont și Schimbare Vehicul, sau selector la Schimbare Telefon */}
+              {formTicketType !== "schimbare_telefon" ? (
                 <div
                   className={`p-3.5 rounded-2xl border-2 flex items-center justify-between ${
                     formPlatforms.includes("wolt")
@@ -1737,7 +1802,11 @@ export default function UnifiedManagerPage() {
                       {formPlatforms.includes("wolt") ? "WOLT" : "GLOVO"}
                     </span>
                     <span className="text-xs font-bold">
-                      {formPlatforms.includes("wolt")
+                      {formTicketType === "schimbare_vehicul"
+                        ? formPlatforms.includes("wolt")
+                          ? "Tichet dedicat pentru Schimbare Autovehicul Wolt (fără poze)"
+                          : "Tichet dedicat pentru Schimbare Autovehicul Glovo"
+                        : formPlatforms.includes("wolt")
                         ? "Tichet dedicat pentru Activare Cont Wolt"
                         : "Tichet dedicat pentru Activare Cont Glovo"}
                     </span>
@@ -1805,7 +1874,11 @@ export default function UnifiedManagerPage() {
                 <div className="bg-purple-50/60 p-4 rounded-2xl border border-purple-200 space-y-4">
                   <h4 className="font-bold text-xs text-purple-950 flex items-center gap-1.5">
                     <Car className="w-4 h-4 text-purple-700" />
-                    <span>Detalii Schimbare Autovehicul</span>
+                    <span>
+                      {formPlatforms.includes("wolt")
+                        ? "Detalii Schimbare Autovehicul Wolt"
+                        : "Detalii Schimbare Autovehicul Glovo"}
+                    </span>
                   </h4>
 
                   <div>
@@ -1868,40 +1941,48 @@ export default function UnifiedManagerPage() {
                     </div>
                   </div>
 
-                  {/* Încărcare Poze Acte Vehicul / Buletin (Necesar pentru Glovo) */}
-                  <div className="pt-3 border-t border-purple-200/80 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
-                        <FileText className="w-4 h-4 text-purple-700" />
-                        <span>Poze Documente Noul Vehicul / Buletin (Necesar Glovo)</span>
-                      </label>
-                      <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
-                        {formPlatforms.includes("glovo") ? "Obligatoriu Glovo" : "Opțional"}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-purple-900/80">
-                      Pentru Glovo se cer documentele noului autovehicul (talon, asigurare, buletin). Poți încărca fișiere JPG, PNG sau PDF.
-                    </p>
+                  {/* Încărcare Poză Vehicul (DOAR PENTRU GLOVO - La Wolt este eliminată complet) */}
+                  {formPlatforms.includes("glovo") && (
+                    <div className="pt-3 border-t border-purple-200/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                          <Car className="w-4 h-4 text-purple-700" />
+                          <span>
+                            {formVehicleType === "masina"
+                              ? "Poză cu mașina (număr înmatriculare vizibil) și curierul lângă mașină"
+                              : formVehicleType === "scuter"
+                              ? "Poză cu curierul pe scuter"
+                              : "Poză cu curierul pe bicicletă"}
+                          </span>
+                        </label>
+                        <span className="text-[10px] bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full border border-amber-300">
+                          Obligatoriu Glovo
+                        </span>
+                      </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <ImageUploadField
                         id="modal_vehicul_doc1"
-                        label="Document 1 / Talon / Acte Vehicul *"
-                        description="Poză sau fișier PDF cu talonul sau actele noului vehicul"
+                        label={
+                          formVehicleType === "masina"
+                            ? "Poză Curier lângă Mașină (să se vadă numărul de înmatriculare)"
+                            : formVehicleType === "scuter"
+                            ? "Poză Curier pe Scuter"
+                            : "Poză Curier pe Bicicletă"
+                        }
+                        description={
+                          formVehicleType === "masina"
+                            ? "Încarcă o poză clară cu curierul lângă mașină în care să se vadă clar numărul de înmatriculare."
+                            : formVehicleType === "scuter"
+                            ? "Încarcă o poză clară cu curierul pe scuter."
+                            : "Încarcă o poză clară cu curierul pe bicicletă."
+                        }
                         value={formIdCardPhoto}
                         onChange={setFormIdCardPhoto}
-                        badge={formPlatforms.includes("glovo") ? "Necesar Glovo" : "Opțional"}
-                      />
-                      <ImageUploadField
-                        id="modal_vehicul_doc2"
-                        label="Document 2 / Poză Vehicul sau Buletin"
-                        description="Poză cu vehiculul, buletinul sau selfie curier"
-                        value={formSelfiePhoto}
-                        onChange={setFormSelfiePhoto}
-                        badge="Opțional"
+                        required
+                        badge="Obligatoriu Glovo"
                       />
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
