@@ -51,6 +51,13 @@ async function parseJsonResponse(res: Response): Promise<any> {
   }
 }
 
+function getRecruiterLabel(recruiter: string): string {
+  if (recruiter === "glovowolt") return "Husein (GlovoWolt)";
+  if (recruiter === "ionutvarga") return "Ionuț Varga";
+  if (recruiter === "pozitiv") return "Pozitiv";
+  return recruiter;
+}
+
 export default function UnifiedManagerPage() {
   const [currentUser, setCurrentUser] = useState<{
     username: string;
@@ -60,7 +67,7 @@ export default function UnifiedManagerPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Admin filter tabs
-  const [adminActiveTab, setAdminActiveTab] = useState<"husein" | "ionutvarga" | "all">("husein");
+  const [adminActiveTab, setAdminActiveTab] = useState<"husein" | "ionutvarga" | "pozitiv" | "all">("husein");
 
   // Login form state
   const [loginUsername, setLoginUsername] = useState("");
@@ -81,7 +88,7 @@ export default function UnifiedManagerPage() {
   // Add Ticket Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formTicketType, setFormTicketType] = useState<TicketType>("activare_cont");
-  const [formTargetRecruiter, setFormTargetRecruiter] = useState<"glovowolt" | "ionutvarga">("glovowolt");
+  const [formTargetRecruiter, setFormTargetRecruiter] = useState<"glovowolt" | "ionutvarga" | "pozitiv">("glovowolt");
   const [formFullName, setFormFullName] = useState("");
   const [formCourierUid, setFormCourierUid] = useState("");
   const [formPhone, setFormPhone] = useState("");
@@ -593,7 +600,7 @@ export default function UnifiedManagerPage() {
     ];
     const rows = filteredApplications.map((app) => [
       new Date(app.createdAt).toLocaleString("ro-RO"),
-      `"${app.recruiter === "glovowolt" ? "Husein" : "Ionut Varga"}"`,
+      `"${getRecruiterLabel(app.recruiter)}"`,
       `"${
         app.ticketType === "schimbare_vehicul"
           ? "Schimbare Autovehicul"
@@ -633,6 +640,7 @@ export default function UnifiedManagerPage() {
       if (currentUser?.role === "admin") {
         if (adminActiveTab === "husein" && app.recruiter !== "glovowolt") return false;
         if (adminActiveTab === "ionutvarga" && app.recruiter !== "ionutvarga") return false;
+        if (adminActiveTab === "pozitiv" && app.recruiter !== "pozitiv") return false;
       }
 
       const matchesSearch =
@@ -755,6 +763,8 @@ export default function UnifiedManagerPage() {
                       ? "bg-purple-400 text-purple-950"
                       : currentUser.username === "glovowolt"
                       ? "bg-amber-400 text-amber-950"
+                      : currentUser.username === "pozitiv"
+                      ? "bg-emerald-400 text-emerald-950"
                       : "bg-sky-400 text-sky-950"
                   }`}
                 >
@@ -951,6 +961,23 @@ export default function UnifiedManagerPage() {
                 </span>
               </button>
 
+              {/* Tab Pozitiv */}
+              <button
+                type="button"
+                onClick={() => setAdminActiveTab("pozitiv")}
+                className={`flex-1 min-w-[170px] py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition cursor-pointer ${
+                  adminActiveTab === "pozitiv"
+                    ? "bg-emerald-600 text-white shadow-md ring-2 ring-emerald-500/40"
+                    : "bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/70"
+                }`}
+              >
+                <span className="text-base">👤</span>
+                <span>POZITIV</span>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-white/20 text-white shadow-2xs">
+                  {applications.filter((a) => a.recruiter === "pozitiv").length}
+                </span>
+              </button>
+
               {/* Tab Toate */}
               <button
                 type="button"
@@ -1114,10 +1141,12 @@ export default function UnifiedManagerPage() {
                       className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                         app.recruiter === "glovowolt"
                           ? "bg-amber-100 text-amber-900 border border-amber-300"
+                          : app.recruiter === "pozitiv"
+                          ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
                           : "bg-sky-100 text-sky-900 border border-sky-300"
                       }`}
                     >
-                      Manager: {app.recruiter === "glovowolt" ? "Husein (GlovoWolt)" : "Ionuț Varga"}
+                      Manager: {getRecruiterLabel(app.recruiter)}
                     </span>
 
                     {/* Ticket Type Tag */}
@@ -1302,7 +1331,7 @@ export default function UnifiedManagerPage() {
                           onClick={() =>
                             setPreviewImage({
                               url: app.idCardPhotoUrl!,
-                              title: `${app.ticketType === "schimbare_vehicul" ? "Poză Curier & Vehicul" : "Buletin"} - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
+                              title: `${app.ticketType === "schimbare_vehicul" ? "Poză Curier & Vehicul" : "Buletin"} - ${app.fullName} (${getRecruiterLabel(app.recruiter)})`,
                             })
                           }
                           className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
@@ -1337,7 +1366,7 @@ export default function UnifiedManagerPage() {
                           onClick={() =>
                             setPreviewImage({
                               url: app.selfiePhotoUrl!,
-                              title: `${app.ticketType === "schimbare_vehicul" ? "Poză Vehicul" : "Selfie cu buletinul"} - ${app.fullName} (${app.recruiter === "glovowolt" ? "Husein" : "Ionuț Varga"})`,
+                              title: `${app.ticketType === "schimbare_vehicul" ? "Poză Vehicul" : "Selfie cu buletinul"} - ${app.fullName} (${getRecruiterLabel(app.recruiter)})`,
                             })
                           }
                           className="w-20 h-20 rounded-xl overflow-hidden cursor-pointer group bg-slate-100 border border-slate-200 relative shadow-2xs hover:ring-2 hover:ring-amber-400 transition-all flex items-center justify-center"
@@ -1781,7 +1810,7 @@ export default function UnifiedManagerPage() {
                   <label className="block text-xs font-bold text-slate-800 mb-2">
                     Atribuie acest tichet managerului:
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => setFormTargetRecruiter("glovowolt")}
@@ -1804,6 +1833,18 @@ export default function UnifiedManagerPage() {
                       }`}
                     >
                       <span>👤 Ionuț Varga</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFormTargetRecruiter("pozitiv")}
+                      className={`py-2.5 px-3 rounded-xl border-2 font-bold text-xs flex items-center justify-center gap-1.5 transition ${
+                        formTargetRecruiter === "pozitiv"
+                          ? "border-emerald-500 bg-emerald-100 text-emerald-950 shadow-xs"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span>👤 Pozitiv</span>
                     </button>
                   </div>
                 </div>

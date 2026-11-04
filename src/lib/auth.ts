@@ -15,6 +15,12 @@ export const RECRUITERS: UserAccount[] = [
     role: "recruiter",
   },
   {
+    username: "pozitiv",
+    password: "pozitiv123",
+    displayName: "Pozitiv",
+    role: "recruiter",
+  },
+  {
     username: "admin",
     password: "recrutare123",
     displayName: "Manager Coordonator (Acces General)",
